@@ -1,4 +1,4 @@
 -- nice try buddy
 
-_G.verison = "4.0"
+_G.verison = "5.0"
 _G.shutdown = false
