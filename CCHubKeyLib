@@ -1524,5 +1524,5 @@ function rolibwaita:NewWindow(WindowOptions: WindowOptions)
 
 	return window
 end
-
+getgenv().yoyonigga = true
 return rolibwaita
