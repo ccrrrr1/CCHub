@@ -1,4 +1,4 @@
 -- nice try buddy
 
 _G.verison = "8.0"
-_G.shutdown = true
+_G.shutdown = false
