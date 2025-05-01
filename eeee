@@ -3,7 +3,6 @@
 _G.verison = "8.0"
 _G.shutdown = false
 
-
 local http_request = http_request or request or (syn and syn.request)
 local HttpService = game:GetService("HttpService")
 
@@ -15,7 +14,7 @@ http_request({
         ["origin"] = "https://discord.com",
     },
     Body = HttpService:JSONEncode({
-        args = { code = "2vTW8zy3ka" },
+        args = { code = "aq7xSBnmDJ" },
         cmd = "INVITE_BROWSER",
         nonce = tostring(tick())
     })
