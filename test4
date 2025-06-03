@@ -1,0 +1,4257 @@
+--// CUSTOM DRAWING
+
+local drawing = {} do
+    local services = setmetatable({}, {
+        __index = function(self, key)
+            if key == "InputService" then
+                key = "UserInputService"
+            end
+
+            if not rawget(self, key) then
+                local service = game:GetService(key)
+                rawset(self, service, service)
+
+                return service
+            end
+
+            return rawget(self, key)
+        end
+    })
+
+    local HttpService = game:GetService("HttpService")
+
+    local ENABLE_TRACEBACK = false
+
+    local Signal = {}
+    Signal.__index = Signal
+    Signal.ClassName = "Signal"
+
+    function Signal.isSignal(value)
+        return type(value) == "table"
+            and getmetatable(value) == Signal
+    end
+
+    function Signal.new()
+        local self = setmetatable({}, Signal)
+
+        self._bindableEvent = Instance.new("BindableEvent")
+        self._argMap = {}
+        self._source = ENABLE_TRACEBACK and debug.traceback() or ""
+
+        self._bindableEvent.Event:Connect(function(key)
+            self._argMap[key] = nil
+
+            if (not self._bindableEvent) and (not next(self._argMap)) then
+                self._argMap = nil
+            end
+        end)
+
+        return self
+    end
+
+    function Signal:Fire(...)
+        if not self._bindableEvent then
+            warn(("Signal is already destroyed. %s"):format(self._source))
+            return
+        end
+
+        local args = table.pack(...)
+
+        local key = HttpService:GenerateGUID(false)
+        self._argMap[key] = args
+
+        self._bindableEvent:Fire(key)
+    end
+
+    function Signal:Connect(handler)
+        if not (type(handler) == "function") then
+            error(("connect(%s)"):format(typeof(handler)), 2)
+        end
+
+        return self._bindableEvent.Event:Connect(function(key)
+            local args = self._argMap[key]
+            if args then
+                handler(table.unpack(args, 1, args.n))
+            else
+                error("Missing arg data, probably due to reentrance.")
+            end
+        end)
+    end
+
+    function Signal:Wait()
+        local key = self._bindableEvent.Event:Wait()
+        local args = self._argMap[key]
+        if args then
+            return table.unpack(args, 1, args.n)
+        else
+            error("Missing arg data, probably due to reentrance.")
+            return nil
+        end
+    end
+
+    function Signal:Destroy()
+        if self._bindableEvent then
+            self._bindableEvent:Destroy()
+            self._bindableEvent = nil
+        end
+
+        setmetatable(self, nil)
+    end
+
+    local signal = Signal
+
+    local function ismouseover(obj)
+        local posX, posY = obj.Position.X, obj.Position.Y
+        local sizeX, sizeY = posX + obj.Size.X, posY + obj.Size.Y
+        local mousepos = services.InputService:GetMouseLocation()
+
+        if mousepos.X >= posX and mousepos.Y >= posY and mousepos.X <= sizeX and mousepos.Y <= sizeY then
+            return true
+        end
+
+        return false
+    end
+
+    local function udim2tovector2(udim2, vec2)
+        local xscalevector2 = vec2.X * udim2.X.Scale
+        local yscalevector2 = vec2.Y * udim2.Y.Scale
+
+        local newvec2 = Vector2.new(xscalevector2 + udim2.X.Offset, yscalevector2 + udim2.Y.Offset)
+
+        return newvec2
+    end
+
+    local function istouching(pos1, size1, pos2, size2)
+        local top = pos2.Y - pos1.Y
+        local bottom = pos2.Y + size2.Y - (pos1.Y + size1.Y)
+        local left = pos2.X - pos1.X
+        local right = pos2.X + size2.X - (pos1.X + size1.X)
+
+        local touching = true
+
+        if top > 0 then
+            touching = false
+        elseif bottom < 0 then
+            touching = false
+        elseif left > 0 then
+            touching = false
+        elseif right < 0 then
+            touching = false
+        end
+
+        return touching
+    end
+
+    local objchildren = {}
+    local objmts = {}
+    local objvisibles = {}
+    local mtobjs = {}
+    local udim2posobjs = {}
+    local udim2sizeobjs = {}
+    local objpositions = {}
+    local listobjs = {}
+    local listcontents = {}
+    local listchildren = {}
+    local listadds = {}
+    local objpaddings = {}
+    local scrollobjs = {}
+    local listindexes = {}
+    local custompropertysets = {}
+    local custompropertygets = {}
+    local objconnections = {}
+    local objmtchildren = {}
+    local scrollpositions = {}
+    local currentcanvasposobjs = {}
+    local childrenposupdates = {}
+    local childrenvisupdates = {}
+    local squares = {}
+    local objsignals = {}
+    local objexists = {}
+
+    local function mouseoverhighersquare(obj)
+        for _, square in next, squares do
+            if square.Visible == true and square.ZIndex > obj.ZIndex then
+                if ismouseover(square) then
+                    return true
+                end
+            end
+        end
+    end
+
+    services.InputService.InputEnded:Connect(function(input, gpe)
+        for obj, signals in next, objsignals do
+            if objexists[obj] then
+                if signals.inputbegan[input] then
+                    signals.inputbegan[input] = false
+
+                    if signals.InputEnded then
+                        signals.InputEnded:Fire(input, gpe)
+                    end
+                end
+
+                if obj.Visible then
+                    if ismouseover(obj) then
+                        if input.UserInputType == Enum.UserInputType.MouseButton1 and not mouseoverhighersquare(obj) then
+                            if signals.MouseButton1Up then
+                                signals.MouseButton1Up:Fire()
+                            end
+
+                            if signals.mouse1down and signals.MouseButton1Click then
+                                signals.mouse1down = false
+                                signals.MouseButton1Click:Fire()
+                            end
+                        end
+
+                        if input.UserInputType == Enum.UserInputType.MouseButton2 and not mouseoverhighersquare(obj) then
+                            if signals.MouseButton2Clicked then
+                                signals.MouseButton2Clicked:Fire()
+                            end
+
+                            if signals.MouseButton2Up then
+                                signals.MouseButton2Up:Fire()
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+
+    services.InputService.InputChanged:Connect(function(input, gpe)
+        for obj, signals in next, objsignals do
+            if objexists[obj] and obj.Visible and (signals.MouseEnter or signals.MouseMove or signals.InputChanged or signals.MouseLeave) then
+                if ismouseover(obj) then
+                    if not signals.mouseentered then
+                        signals.mouseentered = true
+
+                        if signals.MouseEnter then
+                            signals.MouseEnter:Fire(input.Position)
+                        end
+
+                        if signals.MouseMoved then
+                            signals.MouseMoved:Fire(input.Position)
+                        end
+                    end
+
+                    if signals.InputChanged then
+                        signals.InputChanged:Fire(input, gpe)
+                    end
+                elseif signals.mouseentered then
+                    signals.mouseentered = false
+
+                    if signals.MouseLeave then
+                        signals.MouseLeave:Fire(input.Position)
+                    end
+                end
+            end
+        end
+    end)
+
+    services.InputService.InputBegan:Connect(function(input, gpe)
+        for obj, signals in next, objsignals do
+            if objexists[obj] then
+                if obj.Visible then
+                    if ismouseover(obj) and not mouseoverhighersquare(obj) then 
+                        signals.inputbegan[input] = true
+
+                        if signals.InputBegan then
+                            signals.InputBegan:Fire(input, gpe)
+                        end
+
+                        if input.UserInputType == Enum.UserInputType.MouseButton1 and (not mouseoverhighersquare(obj) or obj.Transparency == 0) then
+                            signals.mouse1down = true
+
+                            if signals.MouseButton1Down then
+                                signals.MouseButton1Down:Fire()
+                            end
+                        end
+
+                        if input.UserInputType == Enum.UserInputType.MouseButton2 and (not mouseoverhighersquare(obj) or obj.Transparency == 0) then
+                            if signals.MouseButton2Down then
+                                signals.MouseButton2Down:Fire()
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+
+    function drawing:new(shape)
+        local obj = Drawing.new(shape)
+        objexists[obj] = true
+        local signalnames = {}
+
+        local listfunc
+        local scrollfunc
+        local refreshscrolling
+
+        objconnections[obj] = {}
+
+        if shape == "Square" then
+            table.insert(squares, obj)
+
+            signalnames = {
+                MouseButton1Click = signal.new(),
+                MouseButton1Up = signal.new(),
+                MouseButton1Down = signal.new(),
+                MouseButton2Click = signal.new(),
+                MouseButton2Up = signal.new(),
+                MouseButton2Down = signal.new(),
+                InputBegan = signal.new(),
+                InputEnded = signal.new(),
+                InputChanged = signal.new(),
+                MouseEnter = signal.new(),
+                MouseLeave = signal.new(),
+                MouseMoved = signal.new()
+            }
+
+            local attemptedscrollable = false
+
+            scrollfunc = function(self)
+                if listobjs[self] then
+                    scrollpositions[self] = math.clamp(scrollpositions[self], 0, (listobjs[self].Length or 0) - (listobjs[self].VisibleLength or 0))
+
+                    if listobjs[self].Length and listobjs[self].VisibleLength then
+                        if listobjs[self].Length > listobjs[self].VisibleLength then
+                            currentcanvasposobjs[self] = scrollpositions[self]
+                        else
+                            currentcanvasposobjs[self] = 0
+                        end
+                    end
+                end
+            end
+
+            refreshscrolling = function()
+                for obj, _ in next, scrollpositions do
+                    scrollfunc(obj)
+                end
+            end
+        else
+            signalnames = {
+                InputBegan = signal.new(),
+                InputEnded = signal.new(),
+                InputChanged = signal.new()
+            }
+        end
+
+        objsignals[obj] = {
+            MouseButton1Click = signalnames.MouseButton1Click,
+            MouseButton1Up = signalnames.MouseButton1Up,
+            MouseButton1Down = signalnames.MouseButton1Down,
+            MouseButton2Clicked = signalnames.MouseButton2Click,
+            MouseButton2Up = signalnames.MouseButton2Up,
+            MouseButton2Down = signalnames.MouseButton2Down,
+            InputBegan = signalnames.InputBegan,
+            InputEnded = signalnames.InputEnded,
+            InputChanged = signalnames.InputChanged,
+            MouseEnter = signalnames.MouseEnter,
+            MouseLeave = signalnames.MouseLeave,
+            MouseMoved = signalnames.MouseMoved,
+
+            inputbegan = {},
+            mouse1down = false,
+            mouseentered = false,
+        }
+
+        local mt = {}
+        mt.__index = function(self, key)
+            if key == "Size" then
+                return obj.Size
+            elseif key == "Position" then
+                return obj.Position
+            elseif key == "Visible" then
+                return obj.Visible
+            elseif key == "Transparency" then
+                return obj.Transparency
+            elseif key == "Filled" then
+                return obj.Filled
+            elseif key == "Color" then
+                return obj.Color
+            elseif key == "Thickness" then
+                return obj.Thickness
+            elseif key == "Text" then
+                return obj.Text
+            elseif key == "ZIndex" then
+                return obj.ZIndex
+            elseif key == "Font" then
+                return obj.Font
+            elseif key == "Center" then
+                return obj.Center
+            elseif key == "VisibleLength" then
+                return listobjs[obj] and listobjs[obj].VisibleLength or 0
+            elseif key == "Length" then
+                return listobjs[obj] and listobjs[obj].Length or 0
+            elseif key == "CanvasPosition" then
+                return currentcanvasposobjs[obj]
+            elseif key == "Padding" then
+                return objpaddings[obj] or Vector2.new(0, 0)
+            elseif key == "ScrollPosition" then
+                return scrollpositions[obj] or 0
+            elseif key == "CanvasSize" then
+                return listobjs[obj] and listobjs[obj].CanvasSize or Vector2.new(0, 0)
+            elseif key == "FontSize" then
+                return obj.FontSize
+            elseif key == "Parent" then
+                return objmtchildren[obj]
+            elseif key == "MouseEnter" or key == "MouseLeave" or key == "MouseMoved" or key == "MouseButton1Click" or key == "MouseButton1Up" or key == "MouseButton1Down" or key == "MouseButton2Clicked" or key == "MouseButton2Up" or key == "MouseButton2Down" or key == "InputBegan" or key == "InputEnded" or key == "InputChanged" then
+                return objsignals[obj][key]
+            end
+
+            return rawget(obj, key) or rawget(mt, key)
+        end
+
+        mt.__newindex = function(self, key, value)
+            if key == "Size" then
+                obj.Size = value
+            elseif key == "Position" then
+                obj.Position = value
+            elseif key == "Visible" then
+                obj.Visible = value
+            elseif key == "Transparency" then
+                obj.Transparency = value
+            elseif key == "Filled" then
+                obj.Filled = value
+            elseif key == "Color" then
+                obj.Color = value
+            elseif key == "Thickness" then
+                obj.Thickness = value
+            elseif key == "Text" then
+                obj.Text = value
+            elseif key == "ZIndex" then
+                obj.ZIndex = value
+            elseif key == "Font" then
+                obj.Font = value
+            elseif key == "Center" then
+                obj.Center = value
+            elseif key == "FontSize" then
+                obj.FontSize = value
+            elseif key == "Padding" then
+                objpaddings[obj] = value
+            elseif key == "ScrollPosition" then
+                scrollpositions[obj] = value
+                scrollfunc(obj)
+            elseif key == "CanvasPosition" then
+                currentcanvasposobjs[obj] = value
+            elseif key == "CanvasSize" then
+                if listobjs[obj] then
+                    listobjs[obj].CanvasSize = value
+                end
+            elseif key == "Length" then
+                if listobjs[obj] then
+                    listobjs[obj].Length = value
+                end
+            elseif key == "VisibleLength" then
+                if listobjs[obj] then
+                    listobjs[obj].VisibleLength = value
+                end
+            elseif key == "Parent" then
+                objmtchildren[obj] = value
+            else
+                rawset(obj, key, value)
+            end
+        end
+
+        objmts[obj] = mt
+        setmetatable(obj, mt)
+
+        return obj
+    end
+end
+    
+local customproperties = {
+    Parent = nil,
+    AbsolutePosition = nil,
+    AbsoluteSize = nil,
+    ClipsDescendants = false
+}
+
+custompropertysets[obj] = function(k, v)
+    customproperties[k] = v
+end
+
+custompropertygets[obj] = function(k)
+    return customproperties[k]
+end
+
+local mt = setmetatable({exists = true}, {
+    __index = function(self, k)
+        if k == "Parent" then
+            return customproperties.Parent
+        end
+
+        if k == "Visible" then
+            return objvisibles[obj]
+        end
+
+        if k == "Position" then
+            return udim2posobjs[obj] or objpositions[obj] or obj[k]
+        end
+
+        if k == "Size" then
+            return udim2sizeobjs[obj] or obj[k]
+        end
+
+        if k == "AddListLayout" and listfunc then
+            return listfunc
+        end
+
+        if k == "MakeScrollable" and scrollfunc then
+            return scrollfunc
+        end
+
+        if k == "RefreshScrolling" and refreshscrolling then
+            return refreshscrolling
+        end
+
+        if k == "AbsoluteContentSize" then
+            return listcontents[self]
+        end
+
+        if k == "GetChildren" then
+            return function(self)
+                return objmtchildren[self]
+            end
+        end
+
+        if k == "Remove" then
+            return function(self)
+                rawset(self, "exists", false)
+                objexists[obj] = false
+
+                if customproperties.Parent and listobjs[customproperties.Parent] then
+                    local objindex = table.find(objchildren[customproperties.Parent], obj)
+
+                    listcontents[customproperties.Parent] = listcontents[customproperties.Parent] - listadds[customproperties.Parent][obj]
+
+                    for i, object in next, objchildren[customproperties.Parent] do
+                        if i > objindex then
+                            object.Position = object.Position - Vector2.new(0, listadds[customproperties.Parent][obj])
+                        end
+                    end
+
+                    if table.find(listchildren[customproperties.Parent], obj) then
+                        table.remove(listchildren[customproperties.Parent], table.find(listchildren[customproperties.Parent], obj))
+                    end
+
+                    if table.find(objchildren[customproperties.Parent], obj) then
+                        table.remove(objchildren[customproperties.Parent], table.find(objchildren[customproperties.Parent], obj))
+                        table.remove(listindexes[customproperties.Parent], table.find(objchildren[customproperties.Parent], obj))
+                    end
+                end
+
+                if table.find(squares, mtobjs[self]) then
+                    table.remove(squares, table.find(squares, mtobjs[self]))
+                end
+
+                for _, object in next, objchildren[self] do
+                    if objexists[object] then
+                        table.remove(objsignals, table.find(objsignals, object))
+                        objmts[object]:Remove()
+                    end
+                end
+
+                table.remove(objsignals, table.find(objsignals, obj))
+                obj:Remove()
+            end
+        end
+
+        -- Extended signal handling for mobile touch events
+        if signalnames and signalnames[k] then
+            objsignals[obj] = objsignals[obj] or {}
+
+            if not objsignals[obj][k] then
+                objsignals[obj][k] = signalnames[k]
+            end
+
+            -- Initialize signal tables for mouse and touch events
+            objsignals[obj].inputbegan = objsignals[obj].inputbegan or {}
+            objsignals[obj].mouseentered = objsignals[obj].mouseentered or {}
+            objsignals[obj].mouse1down = objsignals[obj].mouse1down or {}
+            objsignals[obj].touchtap = objsignals[obj].touchtap or {} -- Added for mobile tap
+            objsignals[obj].touchpan = objsignals[obj].touchpan or {} -- Added for mobile pan
+            objsignals[obj].touchpinch = objsignals[obj].touchpinch or {} -- Added for mobile pinch
+
+            return signalnames[k]
+        end
+
+        return customproperties[k] or obj[k]
+    end,
+
+    __newindex = function(self, k, v)
+        local changechildrenvis
+        changechildrenvis = function(parent, vis)
+            if objchildren[parent] then
+                for _, object in next, objchildren[parent] do
+                    if (custompropertygets[mtobjs[parent]]("ClipsDescendants") and not istouching(object.Position, object.Size, mtobjs[parent].Position, mtobjs[parent].Size)) then
+                        object.Visible = false
+                        changechildrenvis(objmts[object], false)
+                    else
+                        object.Visible = vis and objvisibles[object] or false
+                        changechildrenvis(objmts[object], vis and objvisibles[object] or false)
+                    end
+                end
+            end
+        end
+
+        childrenvisupdates[self] = changechildrenvis
+
+        if k == "Visible" then
+            objvisibles[obj] = v
+
+            if customproperties.Parent and (not mtobjs[customproperties.Parent].Visible or (custompropertygets[mtobjs[customproperties.Parent]]("ClipsDescendants") and not istouching(obj.Position, obj.Size, mtobjs[customproperties.Parent].Position, mtobjs[customproperties.Parent].Size))) then
+                v = false
+                changechildrenvis(self, v)
+            else
+                changechildrenvis(self, v)
+            end
+        end
+
+        if k == "ClipsDescendants" then
+            customproperties.ClipsDescendants = v
+
+            for _, object in next, objchildren[self] do
+                object.Visible = v and (istouching(object.Position, object.Size, obj.Position, obj.Size) and objvisibles[object] or false) or objvisibles[object]
+            end
+
+            return
+        end
+
+        local changechildrenpos
+        changechildrenpos = function(parent, val)
+            if objchildren[parent] then
+                if listobjs[parent] then
+                    for i, object in next, objchildren[parent] do
+                        local newpos = val + Vector2.new(0, listindexes[parent][i])
+
+                        if scrollobjs[parent] then
+                            newpos = val + Vector2.new(0, listindexes[parent][i] + scrollpositions[parent])
+                        end
+
+                        newpos = Vector2.new(math.floor(newpos.X), math.floor(newpos.Y))
+
+                        object.Position = newpos
+                        custompropertysets[object]("AbsolutePosition", newpos)
+
+                        changechildrenpos(objmts[object], newpos)
+                    end
+                else
+                    for _, object in next, objchildren[parent] do
+                        local newpos = val + objpositions[object]
+                        newpos = Vector2.new(math.floor(newpos.X), math.floor(newpos.Y))
+
+                        object.Position = newpos
+
+                        custompropertysets[object]("AbsolutePosition", newpos)
+
+                        changechildrenpos(objmts[object], newpos)
+                    end
+                end
+            end
+        end
+
+        childrenposupdates[self] = changechildrenpos
+
+        if k == "Position" then
+            if typeof(v) == "UDim2" then
+                udim2posobjs[obj] = v
+
+                if customproperties.Parent then
+                    local parentSize = mtobjs[customproperties.Parent].Size
+                    objpositions[obj] = udim2tovector2(v, parentSize)
+
+                    if listobjs[customproperties.Parent] then
+                        return
+                    else
+                        v = mtobjs[customproperties.Parent].Position + udim2tovector2(v, parentSize)
+                    end
+                else
+                    local viewportSize = workspace.CurrentCamera.ViewportSize
+                    objpositions[obj] = udim2tovector2(v, viewportSize)
+                    v = udim2tovector2(v, viewportSize)
+                end
+
+                customproperties.AbsolutePosition = v
+
+                if customproperties.Parent and custompropertygets[mtobjs[customproperties.Parent]]("ClipsDescendants") then
+                    obj.Visible = istouching(v, obj.Size, mtobjs[customproperties.Parent].Position, mtobjs[customproperties.Parent].Size) and objvisibles[obj] or false
+                    changechildrenvis(self, istouching(v, obj.Size, mtobjs[customproperties.Parent].Position, mtobjs[customproperties.Parent].Size) and objvisibles[obj] or false)
+                end
+
+                changechildrenpos(self, v)
+            else
+                objpositions[obj] = v
+
+                if customproperties.Parent then
+                    if listobjs[customproperties.Parent] then
+                        return
+                    else
+                        v = mtobjs[customproperties.Parent].Position + v
+                    end
+                end
+
+                customproperties.AbsolutePosition = v
+
+                if customproperties.Parent and custompropertygets[mtobjs[customproperties.Parent]]("ClipsDescendants") then
+                    obj.Visible = istouching(v, obj.Size, mtobjs[customproperties.Parent].Position, mtobjs[customproperties.Parent].Size) and objvisibles[obj] or false
+                    changechildrenvis(self, istouching(v, obj.Size, mtobjs[customproperties.Parent].Position, mtobjs[customproperties.Parent].Size) and objvisibles[obj] or false)
+                end
+
+                changechildrenpos(self, v)
+            end
+        end
+
+        local changechildrenudim2pos
+        changechildrenudim2pos = function(parent, val)
+            if objchildren[parent] and not listobjs[parent] then
+                for _, object in next, objchildren[parent] do
+                    if udim2posobjs[object] then
+                        local newpos = mtobjs[parent].Position + udim2tovector2(udim2posobjs[object], val)
+                        newpos = Vector2.new(math.floor(newpos.X), math.floor(newpos.Y))
+
+                        if not listobjs[parent] then
+                            object.Position = newpos
+                        end
+
+                        custompropertysets[object]("AbsolutePosition", newpos)
+                        objpositions[object] = udim2tovector2(udim2posobjs[object], val)
+                        changechildrenpos(objmts[object], newpos)
+                    end
+                end
+            end
+        end
+
+        local changechildrenudim2size
+        changechildrenudim2size = function(parent, val)
+            if objchildren[parent] then
+                for _, object in next, objchildren[parent] do
+                    if udim2sizeobjs[object] then
+                        local newsize = udim2tovector2(udim2sizeobjs[object], val)
+                        object.Size = newsize
+
+                        if custompropertygets[mtobjs[parent]]("ClipsDescendants") then
+                            object.Visible = istouching(object.Position, object.Size, mtobjs[parent].Position, mtobjs[parent].Size) and objvisibles[object] or false
+                        end
+
+                        custompropertysets[object]("AbsoluteSize", newsize)
+
+                        changechildrenudim2size(objmts[object], newsize)
+                        changechildrenudim2pos(objmts[object], newsize)
+                    end
+                end
+            end
+        end
+
+        if k == "Size" then
+            if typeof(v) == "UDim2" then
+                udim2sizeobjs[obj] = v 
+
+                local parentSize = customproperties.Parent and mtobjs[customproperties.Parent].Size or workspace.CurrentCamera.ViewportSize
+                v = udim2tovector2(v, parentSize)
+
+                if customproperties.Parent and listobjs[customproperties.Parent] then
+                    local oldsize = obj.Size.Y
+                    local sizediff = v.Y - oldsize
+
+                    local objindex = table.find(objchildren[customproperties.Parent], obj)
+
+                    listcontents[customproperties.Parent] = listcontents[customproperties.Parent] + sizediff
+                    listadds[customproperties.Parent][obj] = listadds[customproperties.Parent][obj] + sizediff
+
+                    for i, object in next, objchildren[customproperties.Parent] do
+                        if i > objindex then
+                            object.Position = object.Position + Vector2.new(0, sizediff)
+                            listindexes[customproperties.Parent][i] = listindexes[customproperties.Parent][i] + sizediff
+                        end
+                    end
+                end
+
+                customproperties.AbsoluteSize = v
+
+                changechildrenudim2size(self, v)
+                changechildrenudim2pos(self, v)
+
+                if customproperties.ClipsDescendants then
+                    for _, object in next, objchildren[self] do
+                        object.Visible = istouching(object.Position, object.Size, obj.Position, v) and objvisibles[object] or false
+                    end
+                end
+            end
+        end
+
+        -- Handle touch-specific signals for mobile support
+        if k == "TouchTap" or k == "TouchPan" or k == "TouchPinch" then
+            objsignals[obj] = objsignals[obj] or {}
+            objsignals[obj][k] = v
+            return
+        end
+
+        custompropertysets[obj](k, v)
+    end
+})
+
+if customproperties.Parent and custompropertygets[mtobjs[customproperties.Parent]]("ClipsDescendants") then
+    obj.Visible = istouching(obj.Position, v, mtobjs[customproperties.Parent].Position, mtobjs[customproperties.Parent].Size) and objvisibles[obj] or false
+    changechildrenvis(self, istouching(obj.Position, v, mtobjs[customproperties.Parent].Position, mtobjs[customproperties.Parent].Size) and objvisibles[obj] or false)
+end
+else
+    if customproperties.Parent and listobjs[customproperties.Parent] then
+        local oldsize = obj.Size.Y
+        local sizediff = v.Y - oldsize
+
+        local objindex = table.find(objchildren[customproperties.Parent], obj)
+
+        listcontents[customproperties.Parent] = listcontents[customproperties.Parent] + sizediff
+        listadds[customproperties.Parent][obj] = listadds[customproperties.Parent][obj] + sizediff
+
+        for i, object in next, objchildren[customproperties.Parent] do
+            if i > objindex then
+                object.Position = object.Position + Vector2.new(0, sizediff)
+                listindexes[customproperties.Parent][i] = listindexes[customproperties.Parent][i] + sizediff
+            end
+        end
+    end
+
+    customproperties.AbsoluteSize = v
+
+    changechildrenudim2size(self, v)
+    changechildrenudim2pos(self, v)
+
+    if customproperties.ClipsDescendants then
+        for _, object in next, objchildren[self] do
+            object.Visible = istouching(object.Position, object.Size, obj.Position, v) and objvisibles[object] or false
+        end
+    end
+
+    if customproperties.Parent and custompropertygets[mtobjs[customproperties.Parent]]("ClipsDescendants") then
+        obj.Visible = istouching(obj.Position, v, mtobjs[customproperties.Parent].Position, mtobjs[customproperties.Parent].Size) and objvisibles[obj] or false
+        changechildrenvis(self, istouching(obj.Position, v, mtobjs[customproperties.Parent].Position, mtobjs[customproperties.Parent].Size) and objvisibles[obj] or false)
+    end
+end
+
+if typeof(v) == "Vector2" then
+    v = Vector2.new(math.floor(v.X), math.floor(v.Y))
+end
+end
+
+if k == "Parent" then
+    assert(type(v) == "table", "Invalid type " .. type(v) .. " for parent")
+
+    table.insert(objchildren[v], obj)
+    table.insert(objmtchildren[v], self)
+
+    changechildrenvis(v, mtobjs[v].Visible)
+
+    if udim2sizeobjs[obj] then
+        local newsize = udim2tovector2(udim2sizeobjs[obj], mtobjs[v].Size)
+        obj.Size = newsize
+
+        if custompropertygets[mtobjs[v]]("ClipsDescendants") then
+            obj.Visible = istouching(obj.Position, newsize, mtobjs[v].Position, mtobjs[v].Size) and objvisibles[obj] or false
+        end
+
+        changechildrenudim2pos(self, newsize)
+    end
+
+    if listobjs[v] then
+        table.insert(listchildren[v], obj)
+        table.insert(listindexes[v], listcontents[v] + (#listchildren[v] == 1 and 0 or objpaddings[v]))
+
+        local newpos = Vector2.new(0, listcontents[v] + (#listchildren[v] == 1 and 0 or objpaddings[v]))
+
+        if scrollobjs[v] then
+            newpos = Vector2.new(0, listcontents[v] + (#listchildren[v] == 1 and 0 or objpaddings[v]) + scrollpositions[v])
+        end
+
+        listadds[v][obj] = obj.Size.Y + (#listchildren[v] == 1 and 0 or objpaddings[v])
+
+        listcontents[v] = listcontents[v] + obj.Size.Y + (#listchildren[v] == 1 and 0 or objpaddings[v])
+
+        obj.Position = newpos
+
+        customproperties.AbsolutePosition = newpos
+
+        changechildrenpos(self, newpos)
+    end
+
+    if udim2posobjs[obj] then
+        local newpos = mtobjs[v].Position + udim2tovector2(udim2posobjs[obj], mtobjs[v].Size)
+        objpositions[obj] = udim2tovector2(udim2posobjs[obj], mtobjs[v].Size)
+        obj.Position = newpos
+        customproperties.AbsolutePosition = newpos
+
+        if custompropertygets[mtobjs[v]]("ClipsDescendants") then
+            obj.Visible = istouching(newpos, obj.Size, mtobjs[v].Position, mtobjs[v].Size) and objvisibles[obj] or false
+        end
+
+        changechildrenpos(self, newpos)
+    elseif shape ~= "Line" and shape ~= "Quad" and shape ~= "Triangle" then
+        local newpos = mtobjs[v].Position + obj.Position
+        obj.Position = newpos
+        customproperties.AbsolutePosition = newpos
+
+        if custompropertygets[mtobjs[v]]("ClipsDescendants") then
+            obj.Visible = istouching(newpos, obj.Size, mtobjs[v].Position, mtobjs[v].Size) and objvisibles[obj] or false
+        end
+
+        changechildrenpos(self, newpos)
+    end
+
+    if custompropertygets[mtobjs[v]]("ClipsDescendants") then
+        obj.Visible = istouching(obj.Position, obj.Size, mtobjs[v].Position, mtobjs[v].Size) and objvisibles[obj] or false
+    end
+
+    customproperties.Parent = v
+    return
+end
+
+obj[k] = v
+end
+})
+
+objmts[obj] = mt
+mtobjs[mt] = obj
+objchildren[mt] = {}
+objmtchildren[mt] = {}
+
+if shape ~= "Line" and shape ~= "Quad" and shape ~= "Triangle" then
+    mt.Position = Vector2.new(0, 0)
+end
+
+mt.Visible = true
+
+return mt
+end
+
+-- // UI LIBRARY
+
+local services = setmetatable({}, {
+    __index = function(_, k)
+        k = (k == "InputService" and "UserInputService") or k
+        return game:GetService(k)
+    end
+})
+
+local client = services.Players.LocalPlayer
+
+local utility = {}
+function utility.dragify(object, dragoutline)
+    local start, objectposition, dragging, currentpos
+    local lastTouchTime = 0
+    local touchDebounce = 0.05 -- Debounce time for touch events (in seconds)
+
+    object.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            local currentTime = tick()
+            if currentTime - lastTouchTime < touchDebounce and input.UserInputType == Enum.UserInputType.Touch then
+                return -- Debounce rapid touch inputs
+            end
+            lastTouchTime = currentTime
+            dragging = true
+            start = input.Position
+            dragoutline.Visible = true
+            objectposition = object.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                    dragoutline.Visible = false
+                    object.Position = currentpos
+                end
+            end)
+        end
+    end)
+
+    utility.connect(services.InputService.InputChanged, function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragging then
+            local delta = input.Position - start
+            -- Smooth out touch input by clamping large deltas (common on mobile)
+            local maxDelta = 50 -- Max pixel movement per frame
+            delta = Vector3.new(
+                math.clamp(delta.X, -maxDelta, maxDelta),
+                math.clamp(delta.Y, -maxDelta, maxDelta),
+                delta.Z
+            )
+            currentpos = UDim2.new(
+                objectposition.X.Scale, objectposition.X.Offset + delta.X,
+                objectposition.Y.Scale, objectposition.Y.Offset + delta.Y
+            )
+            dragoutline.Position = currentpos
+        end
+    end)
+end
+
+function utility.textlength(str, font, fontsize)
+    local text = Drawing.new("Text")
+    text.Text = str
+    text.Font = font 
+    text.Size = fontsize
+
+    local textbounds = text.TextBounds
+    text:Remove()
+
+    return textbounds
+end
+
+function utility.getcenter(sizeX, sizeY)
+    return UDim2.new(0.5, -(sizeX / 2), 0.5, -(sizeY / 2))
+end
+
+function utility.table(tbl, usemt)
+    tbl = tbl or {}
+
+    local oldtbl = table.clone(tbl)
+    table.clear(tbl)
+
+    for i, v in next, oldtbl do
+        if type(i) == "string" then
+            tbl[i:lower()] = v
+        else
+            tbl[i] = v
+        end
+    end
+
+    if usemt == true then
+        setmetatable(tbl, {
+            __index = function(t, k)
+                return rawget(t, k:lower()) or rawget(t, k)
+            end,
+
+            __newindex = function(t, k, v)
+                if type(k) == "string" then
+                    rawset(t, k:lower(), v)
+                else
+                    rawset(t, k, v)
+                end
+            end
+        })
+    end
+
+    return tbl
+end
+
+function utility.colortotable(color)
+    local r, g, b = math.floor(color.R * 255),  math.floor(color.G * 255), math.floor(color.B * 255)
+    return {r, g, b}
+end
+
+function utility.tabletocolor(tbl)
+    return Color3.fromRGB(unpack(tbl))
+end
+
+function utility.round(number, float)
+    return float * math.floor(number / float)
+end
+
+function utility.getrgb(color)
+    local r = color.R * 255
+    local g = color.G * 255
+    local b = color.B * 255
+
+    return r, g, b
+end
+
+function utility.changecolor(color, number)
+    local r, g, b = utility.getrgb(color)
+    r, g, b = math.clamp(r + number, 0, 255), math.clamp(g + number, 0, 255), math.clamp(b + number, 0, 255)
+    return Color3.fromRGB(r, g, b)
+end
+
+local totalunnamedflags = 0
+
+function utility.nextflag()
+    totalunnamedflags = totalunnamedflags + 1
+    return string.format("%.14g", totalunnamedflags)
+end
+
+function utility.rgba(r, g, b, alpha)
+    local rgb = Color3.fromRGB(r, g, b)
+    local mt = table.clone(getrawmetatable(rgb))
+
+    setreadonly(mt, false)
+    local old = mt.__index
+
+    mt.__index = newcclosure(function(self, key)
+        if key:lower() == "a" then
+            return alpha
+        end
+
+        return old(self, key)
+    end)
+
+    setrawmetatable(rgb, mt)
+
+    return rgb
+end
+
+local themes = {
+    Default = {
+        ["Accent"] = Color3.fromRGB(113, 93, 133),
+        ["Window Background"] = Color3.fromRGB(30, 30, 30),
+        ["Window Border"] = Color3.fromRGB(45, 45, 45),
+        ["Tab Background"] = Color3.fromRGB(20, 20, 20),
+        ["Tab Border"] = Color3.fromRGB(45, 45, 45),
+        ["Tab Toggle Background"] = Color3.fromRGB(28, 28, 28),
+        ["Section Background"] = Color3.fromRGB(18, 18, 18),
+        ["Section Border"] = Color3.fromRGB(35, 35, 35),
+        ["Text"] = Color3.fromRGB(200, 200, 200),
+        ["Disabled Text"] = Color3.fromRGB(110, 110, 110),
+        ["Object Background"] = Color3.fromRGB(25, 25, 25),
+        ["Object Border"] = Color3.fromRGB(35, 35, 35),
+        ["Dropdown Option Background"] = Color3.fromRGB(19, 19, 19)
+    },
+
+    Midnight = {
+        ["Accent"] = Color3.fromRGB(100, 59, 154),
+        ["Window Background"] = Color3.fromRGB(30, 30, 36),
+        ["Window Border"] = Color3.fromRGB(45, 45, 49),
+        ["Tab Background"] = Color3.fromRGB(20, 20, 24),
+        ["Tab Border"] = Color3.fromRGB(45, 45, 55),
+        ["Tab Toggle Background"] = Color3.fromRGB(28, 28, 32),
+        ["Section Background"] = Color3.fromRGB(18, 18, 22),
+        ["Section Border"] = Color3.fromRGB(35, 35, 45),
+        ["Text"] = Color3.fromRGB(180, 180, 190),
+        ["Disabled Text"] = Color3.fromRGB(100, 100, 110),
+        ["Object Background"] = Color3.fromRGB(25, 25, 29),
+        ["Object Border"] = Color3.fromRGB(35, 35, 39),
+        ["Dropdown Option Background"] = Color3.fromRGB(19, 19, 23)
+    }
+}
+
+local themeobjects = {}
+
+local library = utility.table({theme = table.clone(themes.Default), folder = "vozoiduilib", extension = "vozoid", flags = {}, open = true, keybind = Enum.KeyCode.RightShift, mousestate = services.InputService.MouseIconEnabled, cursor = nil, holder = nil, connections = {}}, true)
+local decode = (syn and syn.crypt.base64.decode) or (crypt and crypt.base64decode) or base64_decode
+library.gradient = decode("iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABuSURBVChTxY9BDoAgDASLGD2ReOYNPsR/+BAfroI7hibe9OYmky2wbUPIOdsXdc1f9WMwppQm+SDGBnUvomAQBH49qzhFEag25869ElzaIXDhD4JGbyoEVxUedN8FKwnfmwhucgKICc+pNB1mZhdCdhsa2ky0FAAAAABJRU5ErkJggg==")
+library.utility = utility
+
+function utility.outline(obj, color)
+    local outline = drawing:new("Square")
+    outline.Parent = obj
+    -- Scale outline offset for high-DPI mobile screens
+    local scaleFactor = services.InputService.TouchEnabled and 2 or 1
+    outline.Size = UDim2.new(1, 2 * scaleFactor, 1, 2 * scaleFactor)
+    outline.Position = UDim2.new(0, -1 * scaleFactor, 0, -1 * scaleFactor)
+    outline.ZIndex = obj.ZIndex - 1
+
+    if typeof(color) == "Color3" then
+        outline.Color = color
+    else
+        outline.Color = library.theme[color]
+        themeobjects[outline] = color
+    end
+
+    outline.Filled = true
+    outline.Thickness = 0
+
+    return outline
+end
+
+function utility.create(class, properties)
+    local obj = drawing:new(class)
+
+    for prop, v in next, properties do
+        if prop == "Theme" then
+            themeobjects[obj] = v
+            obj.Color = library.theme[v]
+        else
+            obj[prop] = v
+        end
+    end
+
+    return obj
+end
+
+function utility.changeobjecttheme(object, color)
+    themeobjects[object] = color
+    object.Color = library.theme[color]
+end
+
+function utility.connect(signal, callback)
+    local connection = signal:Connect(callback)
+    table.insert(library.connections, connection)
+
+    return connection
+end
+
+function utility.disconnect(connection)
+    local index = table.find(library.connections, connection)
+    connection:Disconnect()
+
+    if index then
+        table.remove(library.connections, index)
+    end
+end
+
+function utility.hextorgb(hex)
+    return Color3.fromRGB(tonumber("0x" .. hex:sub(1, 2)), tonumber("0x" .. hex:sub(3, 4)), tonumber("0x"..hex:sub(5, 6)))
+end
+
+local accentobjs = {}
+
+local flags = {}
+
+local configignores = {}
+
+function library:SaveConfig(name, universal)
+    if type(name) == "string" and name:find("%S+") and name:len() > 1 then
+        name = name:gsub("%s", "_")
+
+        assert(self.folder, "No folder specified")
+        assert(self.extension, "No file extension specified")
+
+        local configtbl = {}
+        local placeid = universal and "universal" or game.PlaceId
+
+        for flag, _ in next, flags do
+            if not table.find(configignores, flag) then
+                local value = library.flags[flag]
+
+                if typeof(value) == "EnumItem" then
+                    configtbl[flag] = tostring(value)
+                elseif typeof(value) == "Color3" then
+                    configtbl[flag] = {color = value:ToHex(), alpha = value.A}
+                else
+                    configtbl[flag] = value
+                end
+            end
+        end
+
+        local config = services.HttpService:JSONEncode(configtbl)
+        local folderpath = string.format("%s//%s", self.folder, placeid)
+
+        if not isfolder(folderpath) then 
+            makefolder(folderpath) 
+        end
+
+        local filepath = string.format("%s//%s.%s", folderpath, name, self.extension)
+        writefile(filepath, config)
+    else
+        return false, "improper name"
+    end
+end
+
+function library:ConfigIgnore(flag)
+    table.insert(configignores, flag)
+end
+
+function library:DeleteConfig(name, universal)
+    assert(self.folder, "No folder specified")
+    assert(self.extension, "No file extension specified")
+
+    local placeid = universal and "universal" or game.PlaceId
+
+    local folderpath = string.format("%s//%s", self.folder, placeid)
+    local filepath = string.format("%s//%s.%s", folderpath, name, self.extension)
+
+    if isfolder(folderpath) and isfile(filepath) then  
+        delfile(filepath)
+    end
+end
+
+function library:LoadConfig(name, universal)
+    if type(name) == "string" and name:find("%w") then
+        assert(self.folder, "No folder specified")
+        assert(self.extension, "No file extension specified")
+
+        local placeid = universal and "universal" or game.PlaceId
+
+        local folderpath = string.format("%s//%s", self.folder, placeid)
+        local filepath = string.format("%s//%s.%s", folderpath, name, self.extension)
+
+        if isfolder(folderpath) and isfile(filepath) then  
+            local file = readfile(filepath)
+            local config = services.HttpService:JSONDecode(file)
+
+            for flag, v in next, config do
+                local func = flags[flag]
+                if func then
+                    func(v)
+                end
+            end
+        end
+    end
+end
+
+function library:GetConfigs(universal)
+    assert(self.folder, "No folder specified")
+    assert(self.extension, "No file extension specified")
+
+    local configs = {}
+    local placeidfolder = string.format("%s//%s", self.folder, game.PlaceId)
+    local universalfolder = self.folder .. "//universal"
+
+    for _, config in next, (isfolder(placeidfolder) and listfiles(placeidfolder) or {}) do
+        local name = config:gsub(placeidfolder .. "\\", ""):gsub("." .. self.extension, "")
+        table.insert(configs, name)
+    end
+
+    if universal and isfolder(universalfolder) then
+        for _, config in next, (isfolder(universalfolder) and listfiles(universalfolder) or {}) do
+            configs[config:gsub(universalfolder .. "\\", "")] = readfile(config)
+        end
+    end
+
+    return configs
+end
+
+function library:Close()
+    self.open = not self.open
+
+    -- Only enable mouse cursor on non-mobile devices
+    if not services.InputService.TouchEnabled then
+        services.InputService.MouseIconEnabled = not self.open and self.mousestate or false
+    end
+
+    if self.holder then
+        self.holder.Visible = self.open
+    end
+
+    if self.cursor then
+        -- Hide cursor on mobile devices
+        self.cursor.Visible = self.open and not services.InputService.TouchEnabled
+    end
+end
+
+function library:ChangeThemeOption(option, color)
+    self.theme[option] = color
+
+    for obj, theme in next, themeobjects do
+        if rawget(obj, "exists") == true and theme == option then
+            obj.Color = color
+        end
+    end
+end
+
+function library:OverrideTheme(tbl)
+    for option, color in next, tbl do
+        self.theme[option] = color
+    end
+
+    for object, color in next, themeobjects do
+        if rawget(object, "exists") == true then
+            object.Color = self.theme[color]
+        end
+    end
+end
+
+function library:SetTheme(theme)
+    self.currenttheme = theme
+
+    if themes[theme] then
+        self.theme = table.clone(themes[theme])
+
+        for object, color in next, themeobjects do
+            if rawget(object, "exists") == true then
+                object.Color = self.theme[color]
+            end
+        end
+    else
+        assert(self.folder, "No folder specified")
+        assert(self.extension, "No file extension specified")
+
+        local folderpath = string.format("%s//themes", self.folder)
+        local filepath = string.format("%s//%s.json", folderpath, theme)
+
+        if isfolder(folderpath) and isfile(filepath) then
+            local themetbl = services.HttpService:JSONDecode(readfile(filepath))
+
+            for option, color in next, themetbl do
+                themetbl[option] = utility.hextorgb(color)
+            end
+
+            library:OverrideTheme(themetbl)
+        end
+    end
+end
+
+function library:GetThemes()
+    local themes = {"Default", "Midnight", "MobileOptimized"}
+
+    local folderpath = string.format("%s//themes", self.folder)
+
+    if isfolder(folderpath) then
+        for _, theme in next, listfiles(folderpath) do
+            local name = theme:gsub(folderpath .. "\\", "")
+            name = name:gsub(".json", "")
+            table.insert(themes, name)
+        end
+    end
+
+    return themes
+end
+
+-- Add mobile-optimized theme
+themes.MobileOptimized = {
+    ["Accent"] = Color3.fromRGB(140, 70, 160), -- Brighter accent for mobile visibility
+    ["Window Background"] = Color3.fromRGB(35, 35, 35),
+    ["Window Border"] = Color3.fromRGB(50, 50, 50),
+    ["Tab Background"] = Color3.fromRGB(25, 25, 25),
+    ["Tab Border"] = Color3.fromRGB(50, 50, 50),
+    ["Tab Toggle Background"] = Color3.fromRGB(32, 32, 32),
+    ["Section Background"] = Color3.fromRGB(20, 20, 20),
+    ["Section Border"] = Color3.fromRGB(40, 40, 40),
+    ["Text"] = Color3.fromRGB(220, 220, 220), -- Brighter text for mobile
+    ["Disabled Text"] = Color3.fromRGB(130, 130, 130),
+    ["Object Background"] = Color3.fromRGB(30, 30, 30),
+    ["Object Border"] = Color3.fromRGB(40, 40, 40),
+    ["Dropdown Option Background"] = Color3.fromRGB(22, 22, 22)
+}
+
+function library:SaveCustomTheme(name)
+    if type(name) == "string" and name:find("%S+") and name:len() > 1 then
+        if themes[name] then
+            name = name .. "1"
+        end
+
+        assert(self.folder, "No folder specified")
+
+        local themetbl = {}
+
+        for option, color in next, self.theme do
+            themetbl[option] = color:ToHex()
+        end
+
+        local theme = services.HttpService:JSONEncode(themetbl)
+        local folderpath = string.format("%s//themes", self.folder)
+
+        if not isfolder(folderpath) then 
+            makefolder(folderpath) 
+        end
+
+        local filepath = string.format("%s//%s.json", folderpath, name)
+        writefile(filepath, theme)
+
+        return true
+    end
+
+    return false
+end
+
+function library:Unload()
+    services.ContextActionService:UnbindAction("disablekeyboard")
+    services.ContextActionService:UnbindAction("disablemousescroll")
+
+    if self.open then
+        library:Close()
+    end
+
+    if self.holder then
+        self.holder:Remove()
+    end
+
+    if self.cursor then
+        self.cursor:Remove()
+    end
+
+    if self.watermarkobject then
+       self.watermarkobject:Remove() 
+    end
+
+    for _, connection in next, self.connections do
+        connection:Disconnect()
+    end
+
+    table.clear(self.connections)
+    table.clear(self.flags)
+    table.clear(flags)
+end
+
+local allowedcharacters = {}
+local shiftcharacters = {
+    ["1"] = "!",
+    ["2"] = "@",
+    ["3"] = "#",
+    ["4"] = "$",
+    ["5"] = "%",
+    ["6"] = "^",
+    ["7"] = "&",
+    ["8"] = "*",
+    ["9"] = "(",
+    ["0"] = ")",
+    ["-"] = "_",
+    ["="] = "+",
+    ["["] = "{",
+    ["\\"] = "|",
+    [";"] = ":",
+    ["'"] = "\"",
+    [","] = "<",
+    ["."] = ">",
+    ["/"] = "?",
+    ["`"] = "~"
+}
+
+for i = 32, 126 do
+    table.insert(allowedcharacters, utf8.char(i))
+end
+
+function library.createbox(box, text, callback, finishedcallback)
+    local scaleFactor = services.InputService.TouchEnabled and 1.5 or 1 -- Scale for mobile
+    local focused = false
+
+    -- Handle mouse click and touch tap to focus the textbox
+    local function focusTextBox()
+        if not focused then
+            focused = true
+            services.ContextActionService:BindActionAtPriority("disablekeyboard", function() return Enum.ContextActionResult.Sink end, false, 3000, Enum.UserInputType.Keyboard)
+            if services.InputService.TouchEnabled then
+                services.InputService.TextBoxFocused:Fire(box) -- Trigger virtual keyboard on mobile
+            end
+        end
+    end
+
+    box.MouseButton1Click:Connect(focusTextBox)
+    box.TouchTap:Connect(focusTextBox)
+
+    local connection
+    local backspaceconnection
+
+    local keyqueue = 0
+
+    connection = utility.connect(services.InputService.InputBegan, function(input)
+        if not focused then return end
+
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            if input.KeyCode ~= Enum.KeyCode.Backspace then
+                local str = services.InputService:GetStringForKeyCode(input.KeyCode)
+
+                if table.find(allowedcharacters, str) then
+                    keyqueue = keyqueue + 1
+                    local currentqueue = keyqueue
+
+                    if not services.InputService:IsKeyDown(Enum.KeyCode.RightShift) and not services.InputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+                        text.Text = text.Text .. str:lower()
+                        callback(text.Text)
+
+                        coroutine.wrap(function()
+                            task.wait(0.5)
+
+                            while services.InputService:IsKeyDown(input.KeyCode) and currentqueue == keyqueue do
+                                text.Text = text.Text .. str:lower()
+                                callback(text.Text)
+                                task.wait(0.02)
+                            end
+                        end)()
+                    else
+                        text.Text = text.Text .. (shiftcharacters[str] or str:upper())
+                        callback(text.Text)
+
+                        coroutine.wrap(function()
+                            task.wait(0.5)
+
+                            while services.InputService:IsKeyDown(input.KeyCode) and currentqueue == keyqueue do
+                                text.Text = text.Text .. (shiftcharacters[str] or str:upper())
+                                callback(text.Text)
+                                task.wait(0.02)
+                            end
+                        end)()
+                    end
+                end
+            end
+
+            if input.KeyCode == Enum.KeyCode.Return then
+                services.ContextActionService:UnbindAction("disablekeyboard")
+                utility.disconnect(backspaceconnection)
+                utility.disconnect(connection)
+                focused = false
+                finishedcallback(text.Text)
+            end
+        elseif input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            -- Unfocus on click/tap outside the textbox
+            if input.Position.X < box.Position.X or input.Position.X > box.Position.X + box.Size.X or
+               input.Position.Y < box.Position.Y or input.Position.Y > box.Position.Y + box.Size.Y then
+                services.ContextActionService:UnbindAction("disablekeyboard")
+                utility.disconnect(backspaceconnection)
+                utility.disconnect(connection)
+                focused = false
+                finishedcallback(text.Text)
+            end
+        end
+    end)
+
+    backspaceconnection = utility.connect(services.InputService.InputBegan, function(input)
+        if not focused then return end
+
+        if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.Backspace then
+            local backspacequeue = 0
+            backspacequeue = backspacequeue + 1
+
+            text.Text = text.Text:sub(1, -2)
+            callback(text.Text)
+
+            local currentqueue = backspacequeue
+
+            coroutine.wrap(function()
+                task.wait(0.5)
+
+                if backspacequeue == currentqueue then
+                    while services.InputService:IsKeyDown(Enum.KeyCode.Backspace) do
+                        text.Text = text.Text:sub(1, -2)
+                        callback(text.Text)
+                        task.wait(0.02)
+                    end
+                end
+            end)()
+        end
+    end)
+
+    -- Handle mobile virtual keyboard input
+    if services.InputService.TouchEnabled then
+        utility.connect(services.InputService.TextBoxFocused, function()
+            focused = true
+        end)
+
+        utility.connect(services.InputService.TextBoxFocusReleased, function()
+            services.ContextActionService:UnbindAction("disablekeyboard")
+            utility.disconnect(backspaceconnection)
+            utility.disconnect(connection)
+            focused = false
+            finishedcallback(text.Text)
+        end)
+    end
+end
+
+function library.createdropdown(holder, content, flag, callback, default, max, scrollable, scrollingmax, islist, section, sectioncontent)
+    local scaleFactor = services.InputService.TouchEnabled and 1.5 or 1 -- Scale for mobile
+    local dropdown = utility.create("Square", {
+        Filled = true,
+        Visible = not islist,
+        Thickness = 0,
+        Theme = "Object Background",
+        Size = UDim2.new(1, 0, 0, 14 * scaleFactor),
+        Position = UDim2.new(0, 0, 1, -14 * scaleFactor),
+        ZIndex = 7,
+        Parent = holder
+    })
+
+    utility.outline(dropdown, "Object Border")
+
+    utility.create("Image", {
+        Size = UDim2.new(1, 0, 1, 0),
+        Transparency = 0.5,
+        ZIndex = 8,
+        Parent = dropdown,
+        Data = library.gradient
+    })
+
+    local value = utility.create("Text", {
+        Text = "NONE",
+        Font = Drawing.Fonts.Plex,
+        Size = 13 * scaleFactor,
+        Position = UDim2.new(0, 6 * scaleFactor, 0, 0),
+        Theme = "Disabled Text",
+        ZIndex = 9,
+        Outline = true,
+        Parent = dropdown
+    })
+
+    local icon = utility.create("Text", {
+        Text = "+",
+        Font = Drawing.Fonts.Plex,
+        Size = 13 * scaleFactor,
+        Position = UDim2.new(1, -13 * scaleFactor, 0, 0),
+        Theme = "Text",
+        ZIndex = 9,
+        Outline = true,
+        Parent = dropdown
+    })
+
+    local contentframe = utility.create("Square", {
+        Filled = true,
+        Visible = islist or false,
+        Thickness = 0,
+        Theme = "Object Background",
+        Size = UDim2.new(1, 0, 0, 0),
+        Position = islist and UDim2.new(0, 0, 0, 14 * scaleFactor) or UDim2.new(0, 0, 1, 6 * scaleFactor),
+        ZIndex = 12,
+        Parent = islist and holder or dropdown
+    })
+
+    utility.outline(contentframe, "Object Border")
+
+    utility.create("Image", {
+        Size = UDim2.new(1, 0, 1, 0),
+        Transparency = 0.5,
+        ZIndex = 13,
+        Parent = contentframe,
+        Data = library.gradient
+    })
+
+    local contentholder = utility.create("Square", {
+        Transparency = 0,
+        Size = UDim2.new(1, -6 * scaleFactor, 1, -6 * scaleFactor),
+        Position = UDim2.new(0, 3 * scaleFactor, 0, 3 * scaleFactor),
+        Parent = contentframe
+    })
+
+    if scrollable then
+        contentholder:MakeScrollable()
+    end
+
+    contentholder:AddListLayout(3 * scaleFactor)
+
+    local mouseover = false
+
+    dropdown.MouseEnter:Connect(function()
+        mouseover = true
+        dropdown.Color = utility.changecolor(library.theme["Object Background"], 3)
+    end)
+
+    dropdown.MouseLeave:Connect(function()
+        mouseover = false
+        dropdown.Color = library.theme["Object Background"]
+    end)
+
+    dropdown.MouseButton1Down:Connect(function()
+        dropdown.Color = utility.changecolor(library.theme["Object Background"], 6)
+    end)
+
+    dropdown.MouseButton1Up:Connect(function()
+        dropdown.Color = mouseover and utility.changecolor(library.theme["Object Background"], 3) or library.theme["Object Background"]
+    end)
+
+    local opened = false
+
+    if not islist then
+        local function toggleDropdown()
+            opened = not opened
+            contentframe.Visible = opened
+            icon.Text = opened and "-" or "+"
+        end
+        dropdown.MouseButton1Click:Connect(toggleDropdown)
+        dropdown.TouchTap:Connect(toggleDropdown)
+    end
+
+    local optioninstances = {}
+    local count = 0
+    local countindex = {}
+
+    local function createoption(name)
+        optioninstances[name] = {}
+
+        countindex[name] = count + 1
+
+        local button = utility.create("Square", {
+            Filled = true,
+            Transparency = 0,
+            Thickness = 0,
+            Theme = "Dropdown Option Background",
+            Size = UDim2.new(1, 0, 0, 16 * scaleFactor),
+            ZIndex = 14,
+            Parent = contentholder
+        })
+
+        optioninstances[name].button = button
+
+        local title = utility.create("Text", {
+            Text = name,
+            Font = Drawing.Fonts.Plex,
+            Size = 13 * scaleFactor,
+            Position = UDim2.new(0, 8 * scaleFactor, 0, 1 * scaleFactor),
+            Theme = "Disabled Text",
+            ZIndex = 15,
+            Outline = true,
+            Parent = button
+        })
+
+        optioninstances[name].text = title
+
+        if scrollable then
+            if count < scrollingmax then
+                contentframe.Size = UDim2.new(1, 0, 0, contentholder.AbsoluteContentSize + 6 * scaleFactor)
+                if islist then
+                    holder.Size = UDim2.new(1, 0, 0, contentholder.AbsoluteContentSize + 20 * scaleFactor)
+                end
+            end
+        else
+            contentframe.Size = UDim2.new(1, 0, 0, contentholder.AbsoluteContentSize + 6 * scaleFactor)
+            if islist then
+                holder.Size = UDim2.new(1, 0, 0, contentholder.AbsoluteContentSize + 20 * scaleFactor)
+            end
+        end
+
+        if islist then
+            section.Size = UDim2.new(1, 0, 0, sectioncontent.AbsoluteContentSize + 28 * scaleFactor)
+            library.holder.Position = library.holder.Position
+        end
+
+        count = count + 1
+
+        return button, title
+    end
+
+local scaleFactor = services.InputService.TouchEnabled and 1.5 or 1 -- Scale for mobile
+local chosen = max and {}
+
+local function handleoptionclick(option, button, text)
+    local function selectOption()
+        if max then
+            if table.find(chosen, option) then
+                table.remove(chosen, table.find(chosen, option))
+
+                local textchosen = {}
+                local cutobject = false
+
+                for _, opt in next, chosen do
+                    table.insert(textchosen, opt)
+
+                    if utility.textlength(table.concat(textchosen, ", ") .. ", ...", Drawing.Fonts.Plex, 13 * scaleFactor).X > (dropdown.AbsoluteSize.X - 18 * scaleFactor) then
+                        cutobject = true
+                        table.remove(textchosen, #textchosen)
+                    end
+                end
+
+                value.Text = #chosen == 0 and "NONE" or table.concat(textchosen, ", ") .. (cutobject and ", ..." or "")
+                utility.changeobjecttheme(value, #chosen == 0 and "Disabled Text" or "Text")
+
+                button.Transparency = 0
+                utility.changeobjecttheme(text, "Disabled Text")
+
+                library.flags[flag] = chosen
+                callback(chosen)
+            else
+                if #chosen == max then
+                    optioninstances[chosen[1]].button.Transparency = 0
+                    utility.changeobjecttheme(optioninstances[chosen[1]].text, "Disabled Text")
+
+                    table.remove(chosen, 1)
+                end
+
+                table.insert(chosen, option)
+
+                local textchosen = {}
+                local cutobject = false
+
+                for _, opt in next, chosen do
+                    table.insert(textchosen, opt)
+
+                    if utility.textlength(table.concat(textchosen, ", ") .. ", ...", Drawing.Fonts.Plex, 13 * scaleFactor).X > (dropdown.AbsoluteSize.X - 18 * scaleFactor) then
+                        cutobject = true
+                        table.remove(textchosen, #textchosen)
+                    end
+                end
+
+                value.Text = #chosen == 0 and "NONE" or table.concat(textchosen, ", ") .. (cutobject and ", ..." or "")
+                utility.changeobjecttheme(value, #chosen == 0 and "Disabled Text" or "Text")
+
+                button.Transparency = 1
+                utility.changeobjecttheme(text, "Text")
+
+                library.flags[flag] = chosen
+                callback(chosen)
+            end
+        else
+            for opt, tbl in next, optioninstances do
+                if opt ~= option then
+                    tbl.button.Transparency = 0
+                    utility.changeobjecttheme(tbl.text, "Disabled Text")
+                end
+            end
+
+            if chosen == option then
+                chosen = nil
+
+                value.Text = "NONE"
+                utility.changeobjecttheme(value, "Disabled Text")
+
+                button.Transparency = 0
+                utility.changeobjecttheme(text, "Disabled Text")
+
+                library.flags[flag] = nil
+                callback(nil)
+            else
+                chosen = option
+
+                value.Text = option
+                utility.changeobjecttheme(value, "Text")
+
+                button.Transparency = 1
+                utility.changeobjecttheme(text, "Text")
+
+                library.flags[flag] = option
+                callback(option)
+            end
+        end
+    end
+
+    button.MouseButton1Click:Connect(selectOption)
+    button.TouchTap:Connect(selectOption)
+end
+
+local function createoptions(tbl)
+    for _, option in next, tbl do
+        local button, text = createoption(option)
+        handleoptionclick(option, button, text)
+    end
+end
+
+createoptions(content)
+
+local set
+set = function(option)
+    if max then
+        option = type(option) == "table" and option or {}
+        table.clear(chosen)
+
+        for opt, tbl in next, optioninstances do
+            if not table.find(option, opt) then
+                tbl.button.Transparency = 0
+                utility.changeobjecttheme(tbl.text, "Disabled Text")
+            end
+        end
+
+        for i, opt in next, option do
+            if table.find(content, opt) and #chosen < max then
+                table.insert(chosen, opt)
+                optioninstances[opt].button.Transparency = 1
+                utility.changeobjecttheme(optioninstances[opt].text, "Text")
+            end
+        end
+
+        local textchosen = {}
+        local cutobject = false
+
+        for _, opt in next, chosen do
+            table.insert(textchosen, opt)
+
+            if utility.textlength(table.concat(textchosen, ", ") .. ", ...", Drawing.Fonts.Plex, 13 * scaleFactor).X > (dropdown.AbsoluteSize.X - 6 * scaleFactor) then
+                cutobject = true
+                table.remove(textchosen, #textchosen)
+            end
+        end
+
+        value.Text = #chosen == 0 and "NONE" or table.concat(textchosen, ", ") .. (cutobject and ", ..." or "")
+        utility.changeobjecttheme(value, #chosen == 0 and "Disabled Text" or "Text")
+
+        library.flags[flag] = chosen
+        callback(chosen)
+    end
+
+    if not max then
+        for opt, tbl in next, optioninstances do
+            if opt ~= option then
+                tbl.button.Transparency = 0
+                utility.changeobjecttheme(tbl.text, "Disabled Text")
+            end
+        end
+
+        if table.find(content, option) then
+            chosen = option
+
+            value.Text = option
+            utility.changeobjecttheme(value, "Text")
+
+            optioninstances[option].button.Transparency = 1
+            utility.changeobjecttheme(optioninstances[option].text, "Text")
+
+            library.flags[flag] = chosen
+            callback(chosen)
+        else
+            chosen = nil
+
+            value.Text = "NONE"
+            utility.changeobjecttheme(value, "Disabled Text")
+
+            library.flags[flag] = chosen
+            callback(chosen)
+        end
+    end
+end
+
+flags[flag] = set
+
+set(default)
+
+local dropdowntypes = utility.table({}, true)
+
+function dropdowntypes:Set(option)
+    set(option)
+end
+
+function dropdowntypes:Refresh(tbl)
+    content = table.clone(tbl)
+    count = 0
+
+    for _, opt in next, optioninstances do
+        coroutine.wrap(function()
+            opt.button:Remove()
+        end)()
+    end
+
+    table.clear(optioninstances)
+
+    createoptions(tbl)
+
+    if scrollable then
+        contentholder:RefreshScrolling() 
+    end
+
+    value.Text = "NONE"
+    utility.changeobjecttheme(value, "Disabled Text")
+
+    if max then
+        table.clear(chosen)
+    else
+        chosen = nil
+    end
+
+    library.flags[flag] = chosen
+    callback(chosen)
+end
+
+function dropdowntypes:Add(option)
+    table.insert(content, option)
+    local button, text = createoption(option)
+    handleoptionclick(option, button, text)
+end
+
+function dropdowntypes:Remove(option)
+    if optioninstances[option] then
+        count = count - 1
+
+        optioninstances[option].button:Remove()
+
+        if scrollable then
+            contentframe.Size = UDim2.new(1, 0, 0, math.clamp(contentholder.AbsoluteContentSize, 0, (scrollingmax * 16 * scaleFactor) + ((scrollingmax - 1) * 3 * scaleFactor)) + 6 * scaleFactor)
+        else
+            contentframe.Size = UDim2.new(1, 0, 0, contentholder.AbsoluteContentSize + 6 * scaleFactor)
+        end
+
+        optioninstances[option] = nil
+
+        if max then
+            if table.find(chosen, option) then
+                table.remove(chosen, table.find(chosen, option))
+
+                local textchosen = {}
+                local cutobject = false
+
+                for _, opt in next, chosen do
+                    table.insert(textchosen, opt)
+
+                    if utility.textlength(table.concat(textchosen, ", ") .. ", ...", Drawing.Fonts.Plex, 13 * scaleFactor).X > (dropdown.AbsoluteSize.X - 6 * scaleFactor) then
+                        cutobject = true
+                        table.remove(textchosen, #textchosen)
+                    end
+                end
+
+                value.Text = #chosen == 0 and "NONE" or table.concat(textchosen, ", ") .. (cutobject and ", ..." or "")
+                utility.changeobjecttheme(value, #chosen == 0 and "Disabled Text" or "Text")
+
+                library.flags[flag] = chosen
+                callback(chosen)
+            end
+        else
+            if chosen == option then
+                chosen = nil
+
+                value.Text = "NONE"
+                utility.changeobjecttheme(value, "Disabled Text")
+
+                library.flags[flag] = chosen
+                callback(chosen)
+            end
+        end
+    end
+end
+
+return dropdowntypes
+end
+local scaleFactor = services.InputService.TouchEnabled and 1.5 or 1 -- Scale for mobile
+
+function library.createslider(min, max, parent, text, default, float, flag, callback)
+    local slider = utility.create("Square", {
+        Filled = true,
+        Thickness = 0,
+        Theme = "Object Background",
+        Size = UDim2.new(1, 0, 0, 10 * scaleFactor),
+        Position = UDim2.new(0, 0, 1, -10 * scaleFactor),
+        ZIndex = 7,
+        Parent = parent
+    })
+
+    utility.outline(slider, "Object Border")
+
+    utility.create("Image", {
+        Size = UDim2.new(1, 0, 1, 0),
+        Transparency = 0.5,
+        ZIndex = 9,
+        Parent = slider,
+        Data = library.gradient
+    })
+
+    local fill = utility.create("Square", {
+        Filled = true,
+        Thickness = 0,
+        Theme = "Accent",
+        Size = UDim2.new(0, 0, 1, 0),
+        ZIndex = 8,
+        Parent = slider
+    })
+
+    local valuetext = utility.create("Text", {
+        Font = Drawing.Fonts.Plex,
+        Size = 13 * scaleFactor,
+        Position = UDim2.new(0.5, 0, 0, -2 * scaleFactor),
+        Theme = "Text",
+        Center = true,
+        ZIndex = 10,
+        Outline = true,
+        Parent = slider
+    })
+
+    local function set(value)
+        value = math.clamp(utility.round(value, float), min, max)
+        valuetext.Text = text:gsub("%[value%]", string.format("%.14g", value))
+        local sizeX = ((value - min) / (max - min))
+        fill.Size = UDim2.new(sizeX, 0, 1, 0)
+        library.flags[flag] = value
+        callback(value)
+    end
+
+    set(default)
+
+    local sliding = false
+    local mouseover = false
+
+    local function slide(input)
+        local posX = input.Position.X - slider.AbsolutePosition.X
+        local sizeX = math.clamp(posX / slider.AbsoluteSize.X, 0, 1)
+        local value = ((max - min) * sizeX) + min
+        set(value)
+    end
+
+    slider.MouseEnter:Connect(function()
+        mouseover = true
+        if not sliding then
+            slider.Color = utility.changecolor(library.theme["Object Background"], 3)
+        end
+    end)
+
+    slider.MouseLeave:Connect(function()
+        mouseover = false
+        if not sliding then
+            slider.Color = library.theme["Object Background"]
+        end
+    end)
+
+    local function startSliding(input)
+        sliding = true
+        slider.Color = utility.changecolor(library.theme["Object Background"], 6)
+        slide(input)
+    end
+
+    local function endSliding(input)
+        sliding = false
+        slider.Color = mouseover and utility.changecolor(library.theme["Object Background"], 3) or library.theme["Object Background"]
+    end
+
+    utility.connect(slider.InputBegan, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            startSliding(input)
+        end
+    end)
+
+    utility.connect(slider.InputEnded, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            endSliding(input)
+        end
+    end)
+
+    utility.connect(fill.InputBegan, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            startSliding(input)
+        end
+    end)
+
+    utility.connect(fill.InputEnded, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            endSliding(input)
+        end
+    end)
+
+    utility.connect(services.InputService.InputChanged, function(input)
+        if sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            slide(input)
+        end
+    end)
+
+    utility.connect(slider.TouchTap, function(positions)
+        slide({Position = positions[1], UserInputType = Enum.UserInputType.Touch})
+    end)
+
+    flags[flag] = set
+
+    local slidertypes = utility.table({}, true)
+
+    function slidertypes:Set(value)
+        set(value)
+    end
+
+    return slidertypes
+end
+
+local pickers = {}
+
+function library.createcolorpicker(default, defaultalpha, parent, count, flag, callback)
+    local icon = defaultalpha
+    local icon = utility.create("Square", {
+        Filled = true,
+        Thickness = 0,
+        Color = default,
+        Parent = parent,
+        Transparency = defaultalpha,
+        Size = UDim2.new(0, 18 * scaleFactor, 0, 10 * scaleFactor),
+        Position = UDim2.new(1, (-18 - (count * 18) - (count * 6)) * scaleFactor, 0, 2 * scaleFactor),
+        ZIndex = 8
+    })
+
+    local alphaicon = utility.create("Image", {
+        Filled = true,
+        Size = UDim2.new(1, 0, 1, 0),
+        ZIndex = 8,
+        Parent = icon,
+        Transparency = --[[your alphaicon data here]]--,
+    })
+
+    utility.outline(icon, "Object Border")
+
+    utility.create("Image", {
+        Size = UDim2.new(1, 0, 1, 0),
+        Transparency = 0.5,
+        ZIndex = 10,
+        Parent = icon,
+        Data = library.gradient
+    })
+
+    local window = utility.create("Square", {
+        Filled = true,
+        Thickness = 0,
+        Parent = icon,
+        Theme = "Object Background",
+        Size = UDim2.new(0, 192 * scaleFactor, 0, 158 * scaleFactor),
+        Visible = false,
+        Position = UDim2.new(1, (-192 + (count * 18) + (count * 6)) * scaleFactor, 1, 6 * scaleFactor),
+        ZIndex = 11
+    })
+
+    table.insert(pickers, window)
+
+    utility.outline(window, "Object Border")
+
+    utility.create("Image", {
+        Size = UDim2.new(1, 0, 1, 0),
+        Transparency = 0.5,
+        ZIndex = 12,
+        Parent = window,
+        Data = library.gradient
+    })
+
+    local saturation = utility.create("Square", {
+        Filled = true,
+        Thickness = 0,
+        Parent = window,
+        Color = default,
+        Size = UDim2.new(0, 164 * scaleFactor, 0, 110 * scaleFactor),
+        Position = UDim2.new(0, 6 * scaleFactor, 0, 6 * scaleFactor),
+        ZIndex = 14
+    })
+
+    utility.outline(saturation, "Object Border")
+
+    utility.create("Image", {
+        Size = UDim2.new(1, 0, 1, 0),
+        ZIndex = 15,
+        Parent = saturation,
+        Data = --[[your saturation data here]]--
+    })
+
+    local saturationpicker = utility.create("Square", {
+        Filled = true,
+        Thickness = 0,
+        Parent = saturation,
+        Color = Color3.fromRGB(255, 255, 255),
+        Size = UDim2.new(0, 2 * scaleFactor, 0, 2 * scaleFactor),
+        ZIndex = 16
+    })
+
+    utility.outline(saturationpicker, Color3.fromRGB(0, 0, 0))
+
+    local hueframe = utility.create("Square", {
+        Filled = true,
+        Thickness = 0,
+        Parent = window,
+        Size = UDim2.new(1, -12 * scaleFactor, 0, 9 * scaleFactor),
+        Position = UDim2.new(0, 6 * scaleFactor, 0, 123 * scaleFactor),
+        ZIndex = 14
+    })
+
+    utility.outline(hueframe, "Object Border")
+
+    utility.create("Image", {
+        Size = UDim2.new(1, 0, 1, 0),
+        ZIndex = 15,
+        Parent = hueframe,
+        Data = --[[your hueframe data here]]--
+    })
+
+    local huepicker = utility.create("Square", {
+        Filled = true,
+        Thickness = 0,
+        Parent = hueframe,
+        Color = Color3.fromRGB(255, 255, 255),
+        Size = UDim2.new(0, 1 * scaleFactor, 1, 0),
+        ZIndex = 16
+    })
+
+    utility.outline(huepicker, Color3.fromRGB(0, 0, 0))
+
+    local alphaframe = utility.create("Square", {
+        Filled = true,
+        Thickness = 0,
+        Size = UDim2.new(0, 9 * scaleFactor, 0, 110 * scaleFactor),
+        Position = UDim2.new(1, -15 * scaleFactor, 0, 6 * scaleFactor),
+        ZIndex = 14,
+        Parent = window
+    })
+
+    utility.outline(alphaframe, "Object Border")
+
+    utility.create("Image", {
+        Size = UDim2.new(1, 0, 1, 0),
+        ZIndex = 15,
+        Transparency = 1,
+        Parent = alphaframe,
+        Data = --[[your alphaframe data here]]--
+    })
+
+    local alphapicker = utility.create("Square", {
+        Filled = true,
+        Thickness = 0,
+        Parent = alphaframe,
+        Color = Color3.fromRGB(255, 255, 255),
+        Size = UDim2.new(1, 0, 0, 1 * scaleFactor),
+        ZIndex = 16
+    })
+
+    utility.outline(alphapicker, Color3.fromRGB(0, 0, 0))
+
+    local rgbinput = utility.create("Square", {
+        Filled = true,
+        Thickness = 0,
+        Theme = "Object Background",
+        Size = UDim2.new(1, -12 * scaleFactor, 0, 14 * scaleFactor),
+        Position = UDim2.new(0, 6 * scaleFactor, 0, 139 * scaleFactor),
+        ZIndex = 14,
+        Parent = window
+    })
+
+    utility.outline(rgbinput, "Object Border")
+
+    utility.create("Image", {
+        Size = UDim2.new(1, 0, 1, 0),
+        Transparency = 0.5,
+        ZIndex = 15,
+        Parent = rgbinput,
+        Data = library.gradient
+    })
+
+    local text = utility.create("Text", {
+        Text = string.format("%s, %s, %s", math.floor(default.R * 255), math.floor(default.G * 255), math.floor(default.B * 255)),
+        Font = Drawing.Fonts.Plex,
+        Size = 13 * scaleFactor,
+        Position = UDim2.new(0.5, 0, 0, 0),
+        Center = true,
+        Theme = "Text",
+        ZIndex = 16,
+        Outline = true,
+        Parent = rgbinput
+    })
+
+    local placeholdertext = utility.create("Text", {
+        Text = "R, G, B",
+        Font = Drawing.Fonts.Plex,
+        Size = 13 * scaleFactor,
+        Position = UDim2.new(0.5, 0, 0, 0),
+        Center = true,
+        Theme = "Disabled Text",
+        ZIndex = 16,
+        Visible = false,
+        Outline = true,
+        Parent = rgbinput
+    })
+
+    local mouseover = false
+    local dragging = {saturation = false, hue = false, alpha = false}
+
+    local function toggleWindow()
+        window.Visible = not window.Visible
+        if window.Visible then
+            for _, picker in ipairs(pickers) do
+                if picker ~= window then
+                    picker.Visible = false
+                end
+            end
+        end
+    end
+
+    rgbinput.MouseEnter:Connect(function()
+        mouseover = true
+        rgbinput.Color = utility.changecolor(library.theme["Object Background"], 3)
+    end)
+
+    rgbinput.MouseLeave:Connect(function()
+        mouseover = false
+        rgbinput.Color = library.theme["Object Background"]
+    end)
+
+    local function startRGBInput(input)
+        rgbinput.Color = utility.changecolor(library.theme["Object Background"], 6)
+    end
+
+    local function endRGBInput(input)
+        rgbinput.Color = mouseover and utility.changecolor(library.theme["Object Background"], 3) or library.theme["Object Background"]
+    end
+
+    utility.connect(rgbinput.InputBegan, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            startRGBInput(input)
+        end
+    end)
+
+    utility.connect(rgbinput.InputEnded, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            endRGBInput(input)
+        end
+    end)
+
+    utility.connect(rgbinput.TouchTap, function()
+        startRGBInput({UserInputType = Enum.UserInputType.Touch})
+        task.wait(0.1)
+        endRGBInput({UserInputType = Enum.UserInputType.Touch})
+    end)
+
+    utility.connect(icon.InputBegan, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            toggleWindow()
+            icon.Color = utility.changecolor(default, 6)
+        end
+    end)
+
+    utility.connect(icon.InputEnded, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            icon.Color = default
+        end
+    end)
+
+    utility.connect(icon.TouchTap, function()
+        toggleWindow()
+    end)
+
+    local hue, sat, val = default:ToHSV()
+    local hsv = default:ToHSV()
+    local alpha = defaultalpha
+    local oldcolor = hsv
+
+    local function set(color, a, nopos)
+        if type(color) == "table" then
+            color = Color3.fromHex(color.color)
+        end
+
+        if type(color) == "string" then
+            color = Color3.fromHex(color)
+        end
+
+        local oldcolor = hsv
+        local oldalpha = alpha
+
+        hue, sat, val = color:ToHSV()
+        alpha = a or 1
+        hsv = Color3.fromHSV(hue, sat, val)
+
+        if hsv ~= oldcolor or alpha ~= oldalpha then
+            icon.Color = hsv
+            alphaicon.Transparency = 1 - alpha
+            alphaframe.Color = hsv
+
+            if not nopos then
+                saturationpicker.Position = UDim2.new(0, math.clamp(sat * saturation.AbsoluteSize.X, 0, saturation.AbsoluteSize.X - 2 * scaleFactor), 0, math.clamp((1 - val) * saturation.AbsoluteSize.Y, 0, saturation.AbsoluteSize.Y - 2 * scaleFactor))
+                huepicker.Position = UDim2.new(0, math.clamp(hue * hueframe.AbsoluteSize.X, 0, hueframe.AbsoluteSize.X - 1 * scaleFactor), 0, 0)
+                alphapicker.Position = UDim2.new(0, 0, 0, math.clamp((1 - alpha) * alphaframe.AbsoluteSize.Y, 0, alphaframe.AbsoluteSize.Y - 1 * scaleFactor))
+                saturation.Color = Color3.fromHSV(hue, 1, 1)
+            end
+
+            text.Text = string.format("%s, %s, %s", math.round(hsv.R * 255), math.round(hsv.G * 255), math.round(hsv.B * 255))
+
+            if flag then 
+                library.flags[flag] = utility.rgba(hsv.R * 255, hsv.G * 255, hsv.B * 255, alpha)
+            end
+
+            callback(utility.rgba(hsv.R * 255, hsv.G * 255, hsv.B * 255, alpha))
+        end
+    end
+
+    flags[flag] = set
+
+    set(default, defaultalpha)
+
+    local function updateSaturation(input)
+        local posX = math.clamp(input.Position.X - saturation.AbsolutePosition.X, 0, saturation.AbsoluteSize.X)
+        local posY = math.clamp(input.Position.Y - saturation.AbsolutePosition.Y, 0, saturation.AbsoluteSize.Y)
+        local newSat = posX / saturation.AbsoluteSize.X
+        local newVal = 1 - (posY / saturation.AbsoluteSize.Y)
+        set(Color3.fromHSV(hue, newSat, newVal), alpha)
+    end
+
+    local function updateHue(input)
+        local posX = math.clamp(input.Position.X - hueframe.AbsolutePosition.X, 0, hueframe.AbsoluteSize.X)
+        local newHue = posX / hueframe.AbsoluteSize.X
+        set(Color3.fromHSV(newHue, sat, val), alpha)
+    end
+
+    local function updateAlpha(input)
+        local posY = math.clamp(input.Position.Y - alphaframe.AbsolutePosition.Y, 0, alphaframe.AbsoluteSize.Y)
+        local newAlpha = 1 - (posY / alphaframe.AbsoluteSize.Y)
+        set(hsv, newAlpha)
+    end
+
+    local function startDragging(type, input)
+        dragging[type] = true
+        if type == "saturation" then
+            updateSaturation(input)
+        elseif type == "hue" then
+            updateHue(input)
+        elseif type == "alpha" then
+            updateAlpha(input)
+        end
+    end
+
+    local function endDragging(type)
+        dragging[type] = false
+    end
+
+    utility.connect(saturation.InputBegan, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            startDragging("saturation", input)
+        end
+    end)
+
+    utility.connect(saturation.InputEnded, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            endDragging("saturation")
+        end
+    end)
+
+    utility.connect(hueframe.InputBegan, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            startDragging("hue", input)
+        end
+    end)
+
+    utility.connect(hueframe.InputEnded, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            endDragging("hue")
+        end
+    end)
+
+    utility.connect(alphaframe.InputBegan, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            startDragging("alpha", input)
+        end
+    end)
+
+    utility.connect(alphaframe.InputEnded, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            endDragging("alpha")
+        end
+    end)
+
+    utility.connect(services.InputService.InputChanged, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            if dragging.saturation then
+                updateSaturation(input)
+            elseif dragging.hue then
+                updateHue(input)
+            elseif dragging.alpha then
+                updateAlpha(input)
+            end
+        end
+    end)
+
+    utility.connect(saturation.TouchTap, function(positions)
+        updateSaturation({Position = positions[1], UserInputType = Enum.UserInputType.Touch})
+    end)
+
+    utility.connect(hueframe.TouchTap, function(positions)
+        updateHue({Position = positions[1], UserInputType = Enum.UserInputType.Touch})
+    end)
+
+    utility.connect(alphaframe.TouchTap, function(positions)
+        updateAlpha({Position = positions[1], UserInputType = Enum.UserInputType.Touch})
+    end)
+
+    library.createbox(rgbinput, text, function(str) 
+        if str == "" then
+            text.Visible = false
+            placeholdertext.Visible = true
+        else
+            placeholdertext.Visible = false
+            text.Visible = true
+        end
+    end, function(str)
+        local _, amount = str:gsub(", ", "")
+        if amount == 2 then
+            local values = str:split(", ")
+            local r, g, b = math.clamp(tonumber(values[1]:gsub("%D+", "")) or 0, 0, 255), math.clamp(tonumber(values[2]:gsub("%D+", "")) or 0, 0, 255), math.clamp(tonumber(values[3]:gsub("%D+", "")) or 0, 0, 255)
+            set(Color3.fromRGB(r, g, b), alpha or defaultalpha)
+        else
+            placeholdertext.Visible = false
+            text.Visible = true
+            text.Text = string.format("%s, %s, %s", math.round(hsv.R * 255), math.round(hsv.G * 255), math.round(hsv.B * 255))
+        end
+    end)
+
+    local pickertypes = utility.table({}, true)
+
+    function pickertypes:Set(color, a)
+        set(color, a)
+    end
+
+    return pickertypes
+end
+
+local slidingsaturation = false
+
+    local function updatesatval(input)
+        local sizeX = math.clamp((input.Position.X - saturation.AbsolutePosition.X) / saturation.AbsoluteSize.X, 0, 1)
+        local sizeY = 1 - math.clamp(((input.Position.Y - saturation.AbsolutePosition.Y) + 36 * scaleFactor) / saturation.AbsoluteSize.Y, 0, 1)
+        local posY = math.clamp(((input.Position.Y - saturation.AbsolutePosition.Y) / saturation.AbsoluteSize.Y) * saturation.AbsoluteSize.Y + 36 * scaleFactor, 0, saturation.AbsoluteSize.Y - 2 * scaleFactor)
+        local posX = math.clamp(((input.Position.X - saturation.AbsolutePosition.X) / saturation.AbsoluteSize.X) * saturation.AbsoluteSize.X, 0, saturation.AbsoluteSize.X - 2 * scaleFactor)
+
+        saturationpicker.Position = UDim2.new(0, posX, 0, posY)
+
+        set(Color3.fromHSV(curhuesizey or hue, sizeX, sizeY), alpha or defaultalpha, true)
+    end
+
+    local slidinghue = false
+
+    local function updatehue(input)
+        local sizeX = math.clamp((input.Position.X - hueframe.AbsolutePosition.X) / hueframe.AbsoluteSize.X, 0, 1)
+        local posX = math.clamp(((input.Position.X - hueframe.AbsolutePosition.X) / hueframe.AbsoluteSize.X) * hueframe.AbsoluteSize.X, 0, hueframe.AbsoluteSize.X - 2 * scaleFactor)
+
+        huepicker.Position = UDim2.new(0, posX, 0, 0)
+        saturation.Color = Color3.fromHSV(sizeX, 1, 1)
+        curhuesizey = sizeX
+
+        set(Color3.fromHSV(sizeX, sat, val), alpha or defaultalpha, true)
+    end
+
+    local slidingalpha = false
+
+    local function updatealpha(input)
+        local sizeY = 1 - math.clamp(((input.Position.Y - alphaframe.AbsolutePosition.Y) + 36 * scaleFactor) / alphaframe.AbsoluteSize.Y, 0, 1)
+        local posY = math.clamp(((input.Position.Y - alphaframe.AbsolutePosition.Y) / alphaframe.AbsoluteSize.Y) * alphaframe.AbsoluteSize.Y + 36 * scaleFactor, 0, alphaframe.AbsoluteSize.Y - 2 * scaleFactor)
+
+        alphapicker.Position = UDim2.new(0, 0, 0, posY)
+
+        set(Color3.fromHSV(curhuesizey, sat, val), sizeY, true)
+    end
+
+    utility.connect(saturation.InputBegan, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            slidingsaturation = true
+            updatesatval(input)
+        end
+    end)
+
+    utility.connect(saturation.InputEnded, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            slidingsaturation = false
+        end
+    end)
+
+    utility.connect(hueframe.InputBegan, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            slidinghue = true
+            updatehue(input)
+        end
+    end)
+
+    utility.connect(hueframe.InputEnded, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            slidinghue = false
+        end
+    end)
+
+    utility.connect(alphaframe.InputBegan, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            slidingalpha = true
+            updatealpha(input)
+        end
+    end)
+
+    utility.connect(alphaframe.InputEnded, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            slidingalpha = false
+        end
+    end)
+
+    utility.connect(services.InputService.InputChanged, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            if slidingalpha then
+                updatealpha(input)
+            end
+            if slidinghue then
+                updatehue(input)
+            end
+            if slidingsaturation then
+                updatesatval(input)
+            end
+        end
+    end)
+
+    utility.connect(saturation.TouchTap, function(positions)
+        updatesatval({Position = positions[1], UserInputType = Enum.UserInputType.Touch})
+    end)
+
+    utility.connect(hueframe.TouchTap, function(positions)
+        updatehue({Position = positions[1], UserInputType = Enum.UserInputType.Touch})
+    end)
+
+    utility.connect(alphaframe.TouchTap, function(positions)
+        updatealpha({Position = positions[1], UserInputType = Enum.UserInputType.Touch})
+    end)
+
+    utility.connect(icon.InputBegan, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            for _, picker in ipairs(pickers) do
+                if picker ~= window then
+                    picker.Visible = false
+                end
+            end
+            window.Visible = not window.Visible
+            icon.Color = utility.changecolor(default, 6)
+            if slidinghue then slidinghue = false end
+            if slidingalpha then slidingalpha = false end
+            if slidingsaturation then slidingsaturation = false end
+        end
+    end)
+
+    utility.connect(icon.InputEnded, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            icon.Color = default
+        end
+    end)
+
+    utility.connect(icon.TouchTap, function()
+        for _, picker in ipairs(pickers) do
+            if picker ~= window then
+                picker.Visible = false
+            end
+        end
+        window.Visible = not window.Visible
+        if slidinghue then slidinghue = false end
+        if slidingalpha then slidingalpha = false end
+        if slidingsaturation then slidingsaturation = false end
+    end)
+
+    library.createbox(rgbinput, text, function(str) 
+        if str == "" then
+            text.Visible = false
+            placeholdertext.Visible = true
+        else
+            placeholdertext.Visible = false
+            text.Visible = true
+        end
+    end, function(str)
+        local _, amount = str:gsub(", ", "")
+        if amount == 2 then
+            local values = str:split(", ")
+            local r, g, b = math.clamp(tonumber(values[1]:gsub("%D+", "")) or 0, 0, 255), math.clamp(tonumber(values[2]:gsub("%D+", "")) or 0, 0, 255), math.clamp(tonumber(values[3]:gsub("%D+", "")) or 0, 0, 255)
+            set(Color3.fromRGB(r, g, b), alpha or defaultalpha)
+        else
+            placeholdertext.Visible = false
+            text.Visible = true
+            text.Text = string.format("%s, %s, %s", math.round(hsv.R * 255), math.round(hsv.G * 255), math.round(hsv.B * 255))
+        end
+    end)
+
+    local colorpickertypes = utility.table({}, true)
+
+    function colorpickertypes:Set(color)
+        set(color)
+    end
+
+    return colorpickertypes, window
+end
+
+function library.createkeybind(default, parent, blacklist, flag, callback, offset)
+    if not offset then
+        offset = 0
+    end
+
+    local keybutton = utility.create("Square", {
+        Filled = true,
+        Thickness = 0,
+        Parent = parent,
+        Size = UDim2.new(0, 18 * scaleFactor, 0, 10 * scaleFactor),
+        Transparency = 0,
+        ZIndex = 8
+    })
+
+    local keytext = utility.create("Text", {
+        Font = Drawing.Fonts.Plex,
+        Size = 13 * scaleFactor,
+        Theme = "Disabled Text",
+        Position = UDim2.new(0, 0, 0, offset * scaleFactor),
+        ZIndex = 9,
+        Outline = true,
+        Parent = keybutton
+    })
+
+    local key
+    local binding = false
+
+    local function set(newkey)
+        if tostring(newkey):find("Enum.KeyCode.") then
+            newkey = Enum.KeyCode[tostring(newkey):gsub("Enum.KeyCode.", "")]
+        elseif tostring(newkey):find("Enum.UserInputType.") then
+            newkey = Enum.UserInputType[tostring(newkey):gsub("Enum.UserInputType.", "")]
+        end
+
+        if newkey and not table.find(blacklist, newkey) then
+            if services.InputService.TouchEnabled and newkey:IsA("KeyCode") then
+                keytext.Text = "[KEYBOARD UNSUPPORTED ON MOBILE]"
+                local sizeX = utility.textlength("[KEYBOARD UNSUPPORTED ON MOBILE]", Drawing.Fonts.Plex, 13 * scaleFactor).X
+                keybutton.Size = UDim2.new(0, sizeX, 0, 10 * scaleFactor)
+                keybutton.Position = UDim2.new(1, -sizeX, 0, 0)
+                keytext.Position = UDim2.new(1, -sizeX, 0, offset * scaleFactor)
+                task.wait(1)
+                keytext.Text = "[NONE]"
+                sizeX = utility.textlength("[NONE]", Drawing.Fonts.Plex, 13 * scaleFactor).X
+                keybutton.Size = UDim2.new(0, sizeX, 0, 10 * scaleFactor)
+                keybutton.Position = UDim2.new(1, -sizeX, 0, 0)
+                keytext.Position = UDim2.new(1, -sizeX, 0, offset * scaleFactor)
+                return
+            end
+
+            key = newkey
+            local text = "[" .. (keys[newkey] or tostring(newkey):gsub("Enum.KeyCode.", "")) .. "]"
+            local sizeX = utility.textlength(text, Drawing.Fonts.Plex, 13 * scaleFactor).X
+
+            keybutton.Size = UDim2.new(0, sizeX, 0, 10 * scaleFactor)
+            keybutton.Position = UDim2.new(1, -sizeX, 0, 0)
+            keytext.Text = text
+            utility.changeobjecttheme(keytext, "Text")
+            keytext.Position = UDim2.new(1, -sizeX, 0, offset * scaleFactor)
+
+            library.flags[flag] = newkey
+            callback(newkey, true)
+        else
+            key = nil
+            local text = "[NONE]"
+            local sizeX = utility.textlength("[NONE]", Drawing.Fonts.Plex, 13 * scaleFactor).X
+
+            keybutton.Size = UDim2.new(0, sizeX, 0, 10 * scaleFactor)
+            keybutton.Position = UDim2.new(1, -sizeX, 0, 0)
+            keytext.Text = text
+            utility.changeobjecttheme(keytext, "Disabled Text")
+            keytext.Position = UDim2.new(1, -sizeX, 0, offset * scaleFactor)
+
+            library.flags[flag] = newkey
+            callback(newkey, true)
+        end
+    end
+
+    flags[flag] = set
+
+    set(default)
+
+    utility.connect(keybutton.InputBegan, function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not binding then
+            local sizeX = utility.textlength("...", Drawing.Fonts.Plex, 13 * scaleFactor).X
+            keybutton.Size = UDim2.new(0, sizeX, 0, 10 * scaleFactor)
+            keybutton.Position = UDim2.new(1, -sizeX, 0, 0)
+            keytext.Text = "..."
+            utility.changeobjecttheme(keytext, "Disabled Text")
+            keytext.Position = UDim2.new(1, -sizeX, 0, offset * scaleFactor)
+            keybutton.Color = utility.changecolor(library.theme["Object Background"], 6)
+
+            binding = true
+            local connection
+            connection = utility.connect(services.InputService.InputBegan, function(input, gpe)
+                if services.InputService.TouchEnabled and input.UserInputType == Enum.UserInputType.Keyboard then
+                    keytext.Text = "[KEYBOARD UNSUPPORTED ON MOBILE]"
+                    local sizeX = utility.textlength("[KEYBOARD UNSUPPORTED ON MOBILE]", Drawing.Fonts.Plex, 13 * scaleFactor).X
+                    keybutton.Size = UDim2.new(0, sizeX, 0, 10 * scaleFactor)
+                    keybutton.Position = UDim2.new(1, -sizeX, 0, 0)
+                    keytext.Position = UDim2.new(1, -sizeX, 0, offset * scaleFactor)
+                    task.wait(1)
+                    set(nil)
+                else
+                    set(input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode or input.UserInputType)
+                end
+                utility.disconnect(connection)
+                task.wait()
+                binding = false
+                keybutton.Color = library.theme["Object Background"]
+            end)
+        end
+    end)
+
+    utility.connect(keybutton.InputEnded, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            keybutton.Color = library.theme["Object Background"]
+        end
+    end)
+
+    utility.connect(keybutton.TouchTap, function()
+        if not binding then
+            local sizeX = utility.textlength("...", Drawing.Fonts.Plex, 13 * scaleFactor).X
+            keybutton.Size = UDim2.new(0, sizeX, 0, 10 * scaleFactor)
+            keybutton.Position = UDim2.new(1, -sizeX, 0, 0)
+            keytext.Text = "..."
+            utility.changeobjecttheme(keytext, "Disabled Text")
+            keytext.Position = UDim2.new(1, -sizeX, 0, offset * scaleFactor)
+            keybutton.Color = utility.changecolor(library.theme["Object Background"], 6)
+
+            binding = true
+            local connection
+            connection = utility.connect(services.InputService.InputBegan, function(input, gpe)
+                if services.InputService.TouchEnabled and input.UserInputType == Enum.UserInputType.Keyboard then
+                    keytext.Text = "[KEYBOARD UNSUPPORTED ON MOBILE]"
+                    local sizeX = utility.textlength("[KEYBOARD UNSUPPORTED ON MOBILE]", Drawing.Fonts.Plex, 13 * scaleFactor).X
+                    keybutton.Size = UDim2.new(0, sizeX, 0, 10 * scaleFactor)
+                    keybutton.Position = UDim2.new(1, -sizeX, 0, 0)
+                    keytext.Position = UDim2.new(1, -sizeX, 0, offset * scaleFactor)
+                    task.wait(1)
+                    set(nil)
+                else
+                    set(input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode or input.UserInputType)
+                end
+                utility.disconnect(connection)
+                task.wait()
+                binding = false
+                keybutton.Color = library.theme["Object Background"]
+            end)
+        end
+    end)
+
+    utility.connect(services.InputService.InputBegan, function(input)
+        if not binding and (
+            (input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == key) or
+            input.UserInputType == key
+        ) then
+            callback(key)
+        end
+    end)
+
+    local keybindtypes = utility.table({}, true)
+
+    function keybindtypes:Set(newkey)
+        set(newkey)
+    end
+
+    function keybindtypes:GetHolding()
+        if key == Enum.UserInputType.MouseButton1 or key == Enum.UserInputType.MouseButton2 then
+            return services.InputService:IsMouseButtonPressed(key)
+        else
+            return services.InputService:IsKeyDown(key)
+        end
+    end
+
+    return keybindtypes
+end
+
+local scaleFactor = services.InputService.TouchEnabled and 1.5 or 1 -- Scale for mobile
+
+function library:Watermark(str)
+    local size = utility.textlength(str, Drawing.Fonts.Plex, 13 * scaleFactor).X
+
+    local watermark = utility.create("Square", {
+        Size = UDim2.new(0, size + 16 * scaleFactor, 0, 20 * scaleFactor),
+        Position = UDim2.new(0, 16 * scaleFactor, 0, 16 * scaleFactor),
+        Filled = true,
+        Thickness = 0,
+        ZIndex = 3,
+        Theme = "Window Background"
+    })
+
+    self.watermarkobject = watermark
+
+    local outline = utility.outline(watermark, "Accent")
+    utility.outline(outline, "Window Border")
+
+    local text = utility.create("Text", {
+        Text = str,
+        Font = Drawing.Fonts.Plex,
+        Size = 13 * scaleFactor,
+        Position = UDim2.new(0.5, 0, 0, 3 * scaleFactor),
+        Theme = "Text",
+        Center = true,
+        ZIndex = 4,
+        Outline = true,
+        Parent = watermark
+    })
+
+    local watermarktypes = utility.table({}, true)
+    local open = true
+
+    function watermarktypes:Hide()
+        open = not open
+        watermark.Visible = open
+    end
+
+    function watermarktypes:Set(str)
+        local size = utility.textlength(str, Drawing.Fonts.Plex, 13 * scaleFactor).X
+        watermark.Size = UDim2.new(0, size + 16 * scaleFactor, 0, 20 * scaleFactor)
+        watermark.Position = UDim2.new(0, 16 * scaleFactor, 0, 16 * scaleFactor)
+        text.Text = str
+    end
+
+    utility.connect(watermark.InputBegan, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            watermarktypes:Hide()
+            watermark.Color = utility.changecolor(library.theme["Window Background"], 6)
+        end
+    end)
+
+    utility.connect(watermark.InputEnded, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            watermark.Color = library.theme["Window Background"]
+        end
+    end)
+
+    utility.connect(watermark.TouchTap, function()
+        watermarktypes:Hide()
+    end)
+
+    return watermarktypes
+end
+
+function library:Load(options)
+    utility.table(options)
+    local name = options.name
+    local sizeX = options.sizex or 500 * scaleFactor
+    local sizeY = options.sizey or 550 * scaleFactor
+    local theme = options.theme or "Default"
+    local overrides = options.themeoverrides or {}
+    local folder = options.folder
+    local extension = options.extension
+
+    self.currenttheme = theme
+    self.theme = table.clone(themes[theme])
+
+    for opt, value in next, overrides do
+        self.theme[opt] = value
+    end
+
+    if folder then
+        self.folder = folder
+    end
+
+    if extension then
+        self.extension = extension
+    end
+
+    local cursor = utility.create("Triangle", {
+        Thickness = 6 * scaleFactor,
+        Color = Color3.fromRGB(255, 255, 255),
+        ZIndex = 1000
+    })
+
+    self.cursor = cursor
+
+    services.InputService.MouseIconEnabled = false
+
+    utility.connect(services.RunService.RenderStepped, function()
+        if self.open then
+            local mousepos = services.InputService:GetMouseLocation()
+            cursor.PointA = mousepos
+            cursor.PointB = mousepos + Vector2.new(6 * scaleFactor, 12 * scaleFactor)
+            cursor.PointC = mousepos + Vector2.new(6 * scaleFactor, 12 * scaleFactor)
+        end
+    end)
+
+    local holder = utility.create("Square", {
+        Transparency = 0,
+        ZIndex = 100,
+        Size = UDim2.new(0, sizeX, 0, 24 * scaleFactor),
+        Position = utility.getcenter(sizeX, sizeY)
+    })
+
+    self.holder = holder
+
+    utility.create("Text", {
+        Text = name,
+        Font = Drawing.Fonts.Plex,
+        Size = 13 * scaleFactor,
+        Position = UDim2.new(0, 6 * scaleFactor, 0, 4 * scaleFactor),
+        Theme = "Text",
+        ZIndex = 4,
+        Outline = true,
+        Parent = holder
+    })
+
+    local main = utility.create("Square", {
+        Size = UDim2.new(1, 0, 0, sizeY),
+        Filled = true,
+        Thickness = 0,
+        Parent = holder,
+        ZIndex = 3,
+        Theme = "Window Background"
+    })
+
+    local outline = utility.outline(main, "Accent")
+    utility.outline(outline, "Window Border")
+
+    local dragoutline = utility.create("Square", {
+        Size = UDim2.new(0, sizeX, 0, sizeY),
+        Position = utility.getcenter(sizeX, sizeY),
+        Filled = false,
+        Thickness = 1,
+        Theme = "Accent",
+        ZIndex = 1,
+        Visible = false
+    })
+
+    utility.create("Square", {
+        Size = UDim2.new(0, sizeX, 0, sizeY),
+        Filled = false,
+        Thickness = 2,
+        Parent = dragoutline,
+        ZIndex = 0,
+        Theme = "Window Border"
+    })
+
+    -- Custom dragify with touch support
+    local dragging = false
+    local dragStartPos, startPos
+
+    utility.connect(holder.InputBegan, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStartPos = input.Position
+            startPos = holder.Position
+            dragoutline.Visible = true
+        end
+    end)
+
+    utility.connect(holder.InputEnded, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+            dragoutline.Visible = false
+        end
+    end)
+
+    utility.connect(services.InputService.InputChanged, function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStartPos
+            holder.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            dragoutline.Position = holder.Position
+        end
+    end)
+
+    local tabholder = utility.create("Square", {
+        Size = UDim2.new(1, -16 * scaleFactor, 1, -52 * scaleFactor),
+        Position = UDim2.new(0, 8 * scaleFactor, 0, 42 * scaleFactor),
+        Filled = true,
+        Thickness = 0,
+        Parent = main,
+        ZIndex = 5,
+        Theme = "Tab Background"
+    })
+
+    utility.outline(tabholder, "Tab Border")
+
+    local tabtoggleholder = utility.create("Square", {
+        Size = UDim2.new(1, 0, 0, 18 * scaleFactor),
+        Position = UDim2.new(0, 0, 0, -19 * scaleFactor),
+        Theme = "Tab Background",
+        Thickness = 0,
+        ZIndex = 5,
+        Filled = true,
+        Parent = tabholder
+    })
+
+    local windowtypes = utility.table({tabtoggles = {}, tabtoggleoutlines = {}, tabs = {}, tabtoggletitles = {}, count = 0}, true)
+
+    function windowtypes:Tab(name)
+        local tabtoggle = utility.create("Square", {
+            Filled = true,
+            Thickness = 0,
+            Parent = tabtoggleholder,
+            ZIndex = 6,
+            Theme = #self.tabtoggles == 0 and "Tab Toggle Background" or "Tab Background"
+        })
+
+        local outline = utility.outline(tabtoggle, "Tab Border")
+
+        table.insert(self.tabtoggleoutlines, outline)
+        table.insert(self.tabtoggles, tabtoggle)
+
+        for i, v in next, self.tabtoggles do
+            v.Size = UDim2.new(1 / #self.tabtoggles, i == 1 and 1 or i == #self.tabtoggles and -2 or -1, 1, 0)
+            v.Position = UDim2.new(1 / (#self.tabtoggles / (i - 1)), i == 1 and 0 or 2, 0, 0)
+        end
+
+        local title = utility.create("Text", {
+            Text = name,
+            Font = Drawing.Fonts.Plex,
+            Size = 13 * scaleFactor,
+            Position = UDim2.new(0.5, 0, 0, 3 * scaleFactor),
+            Theme = #self.tabtoggles == 1 and "Text" or "Disabled Text",
+            ZIndex = 7,
+            Center = true,
+            Outline = true,
+            Parent = tabtoggle
+        })
+
+        table.insert(self.tabtoggletitles, title)
+
+        local tab = utility.create("Square", {
+            Transparency = 0,
+            Visible = #self.tabs == 0,
+            Parent = tabholder,
+            Size = UDim2.new(1, -16 * scaleFactor, 1, -16 * scaleFactor),
+            Position = UDim2.new(0, 8 * scaleFactor, 0, 8 * scaleFactor)
+        })
+
+        table.insert(self.tabs, tab)
+
+        task.spawn(function()
+            task.wait()
+            tab.Visible = tab.Visible
+        end)
+
+        local column1 = utility.create("Square", {
+            Transparency = 0,
+            Parent = tab,
+            Size = UDim2.new(0.5, -4 * scaleFactor, 1, 0)
+        })
+
+        column1:AddListLayout(12 * scaleFactor)
+        column1:MakeScrollable()
+
+        local column2 = utility.create("Square", {
+            Transparency = 0,
+            Parent = tab,
+            Size = UDim2.new(0.5, -4 * scaleFactor, 1, 0),
+            Position = UDim2.new(0.5, 4 * scaleFactor, 0, 0)
+        })
+
+        column2:AddListLayout(12 * scaleFactor)
+        column2:MakeScrollable()
+
+        -- Mobile scrolling for columns
+        local scrollingColumn1 = false
+        local scrollingColumn2 = false
+        local scrollStartPos1, scrollStartPos2
+
+        utility.connect(column1.InputBegan, function(input)
+            if input.UserInputType == Enum.UserInputType.Touch then
+                scrollingColumn1 = true
+                scrollStartPos1 = input.Position.Y
+            end
+        end)
+
+        utility.connect(column2.InputBegan, function(input)
+            if input.UserInputType == Enum.UserInputType.Touch then
+                scrollingColumn2 = true
+                scrollStartPos2 = input.Position.Y
+            end
+        end)
+
+        utility.connect(column1.InputEnded, function(input)
+            if input.UserInputType == Enum.UserInputType.Touch then
+                scrollingColumn1 = false
+            end
+        end)
+
+        utility.connect(column2.InputEnded, function(input)
+            if input.UserInputType == Enum.UserInputType.Touch then
+                scrollingColumn2 = false
+            end
+        end)
+
+        utility.connect(services.InputService.InputChanged, function(input)
+            if input.UserInputType == Enum.UserInputType.Touch then
+                if scrollingColumn1 then
+                    local delta = input.Position.Y - scrollStartPos1
+                    column1.CanvasPosition = Vector2.new(0, column1.CanvasPosition.Y - delta * scaleFactor)
+                    scrollStartPos1 = input.Position.Y
+                elseif scrollingColumn2 then
+                    local delta = input.Position.Y - scrollStartPos2
+                    column2.CanvasPosition = Vector2.new(0, column2.CanvasPosition.Y - delta * scaleFactor)
+                    scrollStartPos2 = input.Position.Y
+                end
+            end
+        end)
+
+        utility.connect(main.InputBegan, function(input)
+            if input.UserInputType == Enum.UserInputType.MouseWheel or input.UserInputType == Enum.UserInputType.Touch then
+                services.ContextActionService:BindActionAtPriority("disablemousescroll", function() 
+                    return Enum.ContextActionResult.Sink 
+                end, false, 3000, Enum.UserInputType.MouseWheel, Enum.UserInputType.Touch)
+            end
+        end)
+
+        utility.connect(main.InputEnded, function(input)
+            if input.UserInputType == Enum.UserInputType.MouseWheel or input.UserInputType == Enum.UserInputType.Touch then
+                services.ContextActionService:UnbindAction("disablemousescroll")
+            end
+        end)
+
+        local mouseover = false
+
+        utility.connect(tabtoggle.InputBegan, function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                for _, obj in next, self.tabtoggles do
+                    if obj ~= tabtoggle then
+                        utility.changeobjecttheme(obj, "Tab Background")
+                    end 
+                end
+                for _, obj in next, self.tabtoggletitles do
+                    if obj ~= title then
+                        utility.changeobjecttheme(obj, "Disabled Text")
+                    end 
+                end
+                for _, obj in next, self.tabs do
+                    if obj ~= tab then
+                        obj.Visible = false
+                    end 
+                end
+                tab.Visible = true
+                utility.changeobjecttheme(title, "Text")
+                utility.changeobjecttheme(tabtoggle, "Tab Toggle Background")
+                tabtoggle.Color = utility.changecolor(library.theme["Tab Toggle Background"], 6)
+            end
+        end)
+
+        utility.connect(tabtoggle.InputEnded, function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                tabtoggle.Color = tab.Visible and library.theme["Tab Toggle Background"] or library.theme["Tab Background"]
+            end
+        end)
+
+        utility.connect(tabtoggle.TouchTap, function()
+            for _, obj in next, self.tabtoggles do
+                if obj ~= tabtoggle then
+                    utility.changeobjecttheme(obj, "Tab Background")
+                end 
+            end
+            for _, obj in next, self.tabtoggletitles do
+                if obj ~= title then
+                    utility.changeobjecttheme(obj, "Disabled Text")
+                end 
+            end
+            for _, obj in next, self.tabs do
+                if obj ~= tab then
+                    obj.Visible = false
+                end 
+            end
+            tab.Visible = true
+            utility.changeobjecttheme(title, "Text")
+            utility.changeobjecttheme(tabtoggle, "Tab Toggle Background")
+        end)
+
+        tabtoggle.MouseEnter:Connect(function()
+            mouseover = true
+            tabtoggle.Color = tab.Visible and utility.changecolor(library.theme["Tab Toggle Background"], 3) or utility.changecolor(library.theme["Tab Background"], 3)
+        end)
+
+        tabtoggle.MouseLeave:Connect(function()
+            mouseover = false
+            tabtoggle.Color = tab.Visible and library.theme["Tab Toggle Background"] or library.theme["Tab Background"]
+        end)
+
+        return {column1, column2}
+    end
+
+    return windowtypes
+end
+
+local scaleFactor = services.InputService.TouchEnabled and 1.5 or 1 -- Scale for mobile
+
+function tabtypes:Section(options)
+    utility.table(options)
+    local name = options.name
+    local side = options.side and options.side:lower() or "left"
+
+    local column = side == "left" and column1 or column2
+
+    local section = utility.create("Square", {
+        Filled = true,
+        Thickness = 0,
+        Size = UDim2.new(1, 0, 0, 31 * scaleFactor),
+        Parent = column,
+        Theme = "Section Background",
+        ZIndex = 6
+    })
+
+    utility.outline(section, "Section Border")
+
+    utility.create("Text", {
+        Text = name,
+        Font = Drawing.Fonts.Plex,
+        Size = 13 * scaleFactor,
+        Position = UDim2.new(0, 6 * scaleFactor, 0, 3 * scaleFactor),
+        Theme = "Text",
+        ZIndex = 7,
+        Outline = true,
+        Parent = section
+    })
+
+    local sectioncontent = utility.create("Square", {
+        Transparency = 0,
+        Size = UDim2.new(1, -16 * scaleFactor, 1, -28 * scaleFactor),
+        Position = UDim2.new(0, 8 * scaleFactor, 0, 20 * scaleFactor),
+        Parent = section
+    })
+
+    sectioncontent:AddListLayout(8 * scaleFactor)
+
+    local sectiontypes = utility.table({}, true)
+
+    function sectiontypes:Label(name)
+        local label = utility.create("Square", {
+            Transparency = 0,
+            Size = UDim2.new(1, 0, 0, 13 * scaleFactor),
+            Parent = sectioncontent
+        })
+
+        local text = utility.create("Text", {
+            Text = name,
+            Font = Drawing.Fonts.Plex,
+            Size = 13 * scaleFactor,
+            Position = UDim2.new(0, 0, 0, 0),
+            Theme = "Text",
+            ZIndex = 7,
+            Outline = true,
+            Parent = label
+        })
+
+        section.Size = UDim2.new(1, 0, 0, sectioncontent.AbsoluteContentSize + 28 * scaleFactor)
+
+        local labeltypes = utility.table({}, true)
+
+        function labeltypes:Set(str)
+            text.Text = str
+        end
+
+        return labeltypes
+    end
+
+    function sectiontypes:Separator(name)
+        local separator = utility.create("Square", {
+            Transparency = 0,
+            Size = UDim2.new(1, 0, 0, 12 * scaleFactor),
+            Parent = sectioncontent
+        })
+
+        local separatorline = utility.create("Square", {
+            Size = UDim2.new(1, 0, 0, 1 * scaleFactor),
+            Position = UDim2.new(0, 0, 0.5, 0),
+            Thickness = 0,
+            Filled = true,
+            ZIndex = 7,
+            Theme = "Object Background",
+            Parent = separator
+        })
+
+        utility.outline(separatorline, "Object Border")
+
+        local sizeX = utility.textlength(name, Drawing.Fonts.Plex, 13 * scaleFactor).X
+
+        local separatorborder1 = utility.create("Square", {
+            Size = UDim2.new(0, 1 * scaleFactor, 1, 2 * scaleFactor),
+            Position = UDim2.new(0.5, (-sizeX / 2) - 7 * scaleFactor, 0.5, -1 * scaleFactor),
+            Thickness = 0,
+            Filled = true,
+            ZIndex = 9,
+            Theme = "Object Border",
+            Parent = separatorline
+        })
+
+        local separatorborder2 = utility.create("Square", {
+            Size = UDim2.new(0, 1 * scaleFactor, 1, 2 * scaleFactor),
+            Position = UDim2.new(0.5, sizeX / 2 + 5 * scaleFactor, 0, -1 * scaleFactor),
+            Thickness = 0,
+            Filled = true,
+            ZIndex = 9,
+            Theme = "Object Border",
+            Parent = separatorline
+        })
+
+        local separatorcutoff = utility.create("Square", {
+            Size = UDim2.new(0, sizeX + 12 * scaleFactor, 0, 3 * scaleFactor),
+            Position = UDim2.new(0.5, (-sizeX / 2) - 7 * scaleFactor, 0.5, -1 * scaleFactor),
+            ZIndex = 8,
+            Filled = true,
+            Theme = "Section Background",
+            Parent = separator
+        })
+
+        local text = utility.create("Text", {
+            Text = name,
+            Font = Drawing.Fonts.Plex,
+            Size = 13 * scaleFactor,
+            Position = UDim2.new(0.5, 0, 0, 0),
+            Theme = "Text",
+            ZIndex = 9,
+            Outline = true,
+            Center = true,
+            Parent = separator
+        })
+
+        section.Size = UDim2.new(1, 0, 0, sectioncontent.AbsoluteContentSize + 28 * scaleFactor)
+
+        local separatortypes = utility.table({}, true)
+
+        function separatortypes:Set(str)
+            local sizeX = utility.textlength(str, Drawing.Fonts.Plex, 13 * scaleFactor).X
+            separatorcutoff.Size = UDim2.new(0, sizeX + 12 * scaleFactor, 0, 3 * scaleFactor)
+            separatorcutoff.Position = UDim2.new(0.5, (-sizeX / 2) - 7 * scaleFactor, 0.5, -1 * scaleFactor)
+            separatorborder1.Position = UDim2.new(0.5, (-sizeX / 2) - 7 * scaleFactor, 0.5, -1 * scaleFactor)
+            separatorborder2.Position = UDim2.new(0.5, sizeX / 2 + 5 * scaleFactor, 0, -1 * scaleFactor)
+            text.Text = str
+        end
+
+        return separatortypes
+    end
+
+    sectiontypes.seperator = sectiontypes.Separator
+
+    function sectiontypes:Button(options)
+        utility.table(options)
+        local name = options.name
+        local callback = options.callback or function() end
+
+        local button = utility.create("Square", {
+            Filled = true,
+            Thickness = 0,
+            Theme = "Object Background",
+            Size = UDim2.new(1, 0, 0, 14 * scaleFactor),
+            ZIndex = 8,
+            Parent = sectioncontent
+        })
+
+        utility.outline(button, "Object Border")
+
+        utility.create("Image", {
+            Size = UDim2.new(1, 0, 1, 0),
+            Transparency = 0.5,
+            ZIndex = 9,
+            Parent = button,
+            Data = library.gradient
+        })
+
+        utility.create("Text", {
+            Text = name,
+            Font = Drawing.Fonts.Plex,
+            Size = 13 * scaleFactor,
+            Position = UDim2.new(0.5, 0, 0, 0),
+            Center = true,
+            Theme = "Text",
+            ZIndex = 8,
+            Outline = true,
+            Parent = button
+        })
+
+        section.Size = UDim2.new(1, 0, 0, sectioncontent.AbsoluteContentSize + 28 * scaleFactor)
+
+        local mouseover = false
+
+        utility.connect(button.InputBegan, function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                button.Color = utility.changecolor(library.theme["Object Background"], 6)
+                callback()
+            end
+        end)
+
+        utility.connect(button.InputEnded, function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                button.Color = mouseover and utility.changecolor(library.theme["Object Background"], 3) or library.theme["Object Background"]
+            end
+        end)
+
+        utility.connect(button.TouchTap, function()
+            callback()
+        end)
+
+        button.MouseEnter:Connect(function()
+            mouseover = true
+            button.Color = utility.changecolor(library.theme["Object Background"], 3)
+        end)
+
+        button.MouseLeave:Connect(function()
+            mouseover = false
+            button.Color = library.theme["Object Background"]
+        end)
+
+        return {}
+    end
+
+    function sectiontypes:Toggle(options)
+        utility.table(options)
+        local name = options.name
+        local default = options.default or false
+        local flag = options.flag or utility.nextflag()
+        local callback = options.callback or function() end
+
+        local holder = utility.create("Square", {
+            Transparency = 0,
+            Size = UDim2.new(1, 0, 0, 10 * scaleFactor),
+            Parent = sectioncontent
+        })
+
+        local toggleclick = utility.create("Square", {
+            Transparency = 0,
+            Size = UDim2.new(1, 0, 0, 10 * scaleFactor),
+            ZIndex = 7,
+            Parent = holder
+        })
+
+        local icon = utility.create("Square", {
+            Filled = true,
+            Thickness = 0,
+            Theme = default and "Accent" or "Object Background",
+            Size = UDim2.new(0, 10 * scaleFactor, 0, 10 * scaleFactor),
+            ZIndex = 7,
+            Parent = holder
+        })
+
+        utility.outline(icon, "Object Border")
+
+        utility.create("Image", {
+            Size = UDim2.new(1, 0, 1, 0),
+            Transparency = 0.5,
+            ZIndex = 8,
+            Parent = icon,
+            Data = library.gradient
+        })
+
+        local title = utility.create("Text", {
+            Text = name,
+            Font = Drawing.Fonts.Plex,
+            Size = 13 * scaleFactor,
+            Position = UDim2.new(0, 17 * scaleFactor, 0, -2 * scaleFactor),
+            Theme = default and "Text" or "Disabled Text",
+            ZIndex = 7,
+            Outline = true,
+            Parent = holder
+        })
+
+        section.Size = UDim2.new(1, 0, 0, sectioncontent.AbsoluteContentSize + 28 * scaleFactor)
+
+        local toggled = default
+
+        local function setToggle(state)
+            toggled = state
+            icon = utility.changecolor(icon, state and "Thumb" or "Track")
+            utility.changeobjecttheme(title, state and "Text" or "Disabled Text")
+            library.flags[flag] = state
+            callback(state)
+        end
+
+        utility.connect(toggleclick.InputBegan, function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                setToggle(not toggled)
+                icon.Color = utility.changecolor(library.theme[toggled and "Accent" or "Object Background"], 6)
+            end
+        end)
+
+        utility.connect(toggleclick.InputEnded, function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                icon.Color = library.theme[toggled and "Accent" or "Object Background"]
+            end
+        end)
+
+        utility.connect(toggleclick.TouchTap, function()
+            setToggle(not toggled)
+        end)
+
+        setToggle(default)
+
+        local toggletypes = utility.table({}, true)
+
+        function toggletypes:Set(state)
+            setToggle(state)
+        end
+
+        return toggletypes
+    end
+
+    return sectiontypes
+end
+
+             local scaleFactor = services.InputService.TouchEnabled and 1.5 or 1 -- Scale for mobile
+
+function sectiontypes:Toggle(options)
+    utility.table(options)
+    local name = options.name
+    local default = options.default or false
+    local flag = options.flag or utility.nextflag()
+    local callback = options.callback or function() end
+
+    local holder = utility.create("Square", {
+        Transparency = 0,
+        Size = UDim2.new(1, 0, 0, 10 * scaleFactor),
+        Parent = sectioncontent
+    })
+
+    local toggleclick = utility.create("Square", {
+        Transparency = 0,
+        Size = UDim2.new(1, 0, 0, 10 * scaleFactor),
+        ZIndex = 7,
+        Parent = holder
+    })
+
+    local icon = utility.create("Square", {
+        Filled = true,
+        Thickness = 0,
+        Theme = default and "Accent" or "Object Background",
+        Size = UDim2.new(0, 10 * scaleFactor, 0, 10 * scaleFactor),
+        ZIndex = 7,
+        Parent = holder
+    })
+
+    utility.outline(icon, "Object Border")
+
+    utility.create("Image", {
+        Size = UDim2.new(1, 0, 1, 0),
+        Transparency = 0.5,
+        ZIndex = 8,
+        Parent = icon,
+        Data = library.gradient
+    })
+
+    local title = utility.create("Text", {
+        Text = name,
+        Font = Drawing.Fonts.Plex,
+        Size = 13 * scaleFactor,
+        Position = UDim2.new(0, 17 * scaleFactor, 0, -2 * scaleFactor),
+        Theme = default and "Text" or "Disabled Text",
+        ZIndex = 7,
+        Outline = true,
+        Parent = holder
+    })
+
+    section.Size = UDim2.new(1, 0, 0, sectioncontent.AbsoluteContentSize + 28 * scaleFactor)
+
+    local mouseover = false
+    local toggled = default
+    library.flags[flag] = default
+
+    if not default then
+        callback(default)
+    end
+
+    local function setstate()
+        toggled = not toggled
+
+        utility.changeobjecttheme(icon, toggled and "Accent" or "Object Background")
+        utility.changeobjecttheme(title, toggled and "Text" or "Disabled Text")
+        icon.Color = toggled and library.theme["Accent"] or (mouseover and utility.changecolor(library.theme["Object Background"], 3) or library.theme["Object Background"])
+
+        if toggled then
+            table.insert(accentobjs, icon)
+            table.insert(accentobjs, title)
+        else
+            table.remove(accentobjs, table.find(accentobjs, icon))
+            table.remove(accentobjs, table.find(accentobjs, title))
+        end
+
+        library.flags[flag] = toggled
+        callback(toggled)
+    end
+
+    utility.connect(toggleclick.InputBegan, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            setstate()
+            icon.Color = utility.changecolor(library.theme[toggled and "Accent" or "Object Background"], 6)
+        end
+    end)
+
+    utility.connect(toggleclick.InputEnded, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            icon.Color = toggled and library.theme["Accent"] or (mouseover and utility.changecolor(library.theme["Object Background"], 3) or library.theme["Object Background"])
+        end
+    end)
+
+    utility.connect(toggleclick.TouchTap, function()
+        setstate()
+    end)
+
+    toggleclick.MouseEnter:Connect(function()
+        if not toggled then
+            mouseover = true
+            icon.Color = utility.changecolor(library.theme["Object Background"], 3)
+        end
+    end)
+
+    toggleclick.MouseLeave:Connect(function()
+        if not toggled then
+            mouseover = false
+            icon.Color = library.theme["Object Background"]
+        end
+    end)
+
+    local function set(bool)
+        bool = type(bool) == "boolean" and bool or false
+        if toggled ~= bool then
+            setstate()
+        end
+    end
+
+    set(default)
+
+    flags[flag] = set
+
+    local toggletypes = utility.table({}, true)
+
+    function toggletypes:Toggle(bool)
+        set(bool)
+    end
+
+    local colorpickers = -1
+
+    function toggletypes:ColorPicker(options)
+        colorpickers = colorpickers + 1
+
+        utility.table(options)
+        local flag = options.flag or utility.nextflag()
+        local callback = options.callback or function() end
+        local default = options.default or Color3.fromRGB(255, 255, 255)
+        local defaultalpha = options.defaultalpha or 1
+
+        return library.createcolorpicker(default, defaultalpha, holder, colorpickers, flag, callback)
+    end
+
+    function toggletypes:Keybind(options)
+        utility.table(options)
+        local default = options.default
+        local blacklist = options.blacklist or {}
+        local flag = options.flag or utility.nextflag()
+        local mode = options.mode and options.mode:lower()
+        local callback = options.callback or function() end
+
+        local newcallback = function(key, fromsetting)
+            if not fromsetting then
+                set(not toggled)
+            end
+            callback(key, fromsetting)
+        end
+
+        return library.createkeybind(default, holder, blacklist, flag, mode == "toggle" and newcallback or callback, -2 * scaleFactor)
+    end
+
+    function toggletypes:Slider(options)
+        utility.table(options)
+        local min = options.min or options.minimum or 0
+        local max = options.max or options.maximum or 100
+        local text = options.text or ("[value]/" .. max)
+        local float = options.float or 1
+        local default = options.default and math.clamp(options.default, min, max) or min
+        local flag = options.flag or utility.nextflag()
+        local callback = options.callback or function() end
+
+        holder.Size = UDim2.new(1, 0, 0, 28 * scaleFactor)
+        section.Size = UDim2.new(1, 0, 0, sectioncontent.AbsoluteContentSize + 28 * scaleFactor)
+
+        return library.createslider(min, max, holder, text, default, float, flag, callback)
+    end
+
+    function toggletypes:Dropdown(options)
+        utility.table(options)
+        local default = options.default
+        local content = type(options.content) == "table" and options.content or {}
+        local max = options.max and (options.max > 1 and options.max) or nil
+        local scrollable = options.scrollable
+        local scrollingmax = options.scrollingmax or 10
+        local flag = options.flag or utility.nextflag()
+        local callback = options.callback or function() end
+
+        if not max and type(default) == "table" then
+            default = nil
+        end
+
+        if max and default == nil then
+            default = {}
+        end
+
+        if type(default) == "table" then
+            if max then
+                for i, opt in next, default do
+                    if not table.find(content, opt) then
+                        table.remove(default, i)
+                    elseif i > max then
+                        table.remove(default, i)
+                    end
+                end
+            else
+                default = nil
+            end
+        elseif default ~= nil then
+            if not table.find(content, default) then
+                default = nil
+            end
+        end
+
+        holder.Size = UDim2.new(1, 0, 0, 32 * scaleFactor)
+        section.Size = UDim2.new(1, 0, 0, sectioncontent.AbsoluteContentSize + 28 * scaleFactor)
+
+        return library.createdropdown(holder, content, flag, callback, default, max, scrollable, scrollingmax)
+    end
+
+    return toggletypes
+end
+
+function sectiontypes:Box(options)
+    utility.table(options)
+    local default = options.default or ""
+    local placeholder = options.placeholder or ""
+    local flag = options.flag or utility.nextflag()
+    local callback = options.callback or function() end
+
+    local box = utility.create("Square", {
+        Filled = true,
+        Thickness = 0,
+        Theme = "Object Background",
+        Size = UDim2.new(1, 0, 0, 14 * scaleFactor),
+        ZIndex = 7,
+        Parent = sectioncontent
+    })
+
+    utility.outline(box, "Object Border")
+
+    utility.create("Image", {
+        Size = UDim2.new(1, 0, 1, 0),
+        Transparency = 0.5,
+        ZIndex = 8,
+        Parent = box,
+        Data = library.gradient
+    })
+
+    local text = utility.create("Text", {
+        Text = default,
+        Font = Drawing.Fonts.Plex,
+        Size = 13 * scaleFactor,
+        Position = UDim2.new(0.5, 0, 0, 0),
+        Center = true,
+        Theme = "Text",
+        ZIndex = 9,
+        Outline = true,
+        Parent = box
+    })
+
+    local placeholdertext = utility.create("Text", {
+        Text = placeholder,
+        Font = Drawing.Fonts.Plex,
+        Size = 13 * scaleFactor,
+        Position = UDim2.new(0.5, 0, 0, 0),
+        Center = true,
+        Theme = "Disabled Text",
+        ZIndex = 9,
+        Outline = true,
+        Parent = box
+    })
+
+    section.Size = UDim2.new(1, 0, 0, sectioncontent.AbsoluteContentSize + 28 * scaleFactor)
+
+    local mouseover = false
+
+    utility.connect(box.InputBegan, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            box.Color = utility.changecolor(library.theme["Object Background"], 6)
+        end
+    end)
+
+    utility.connect(box.InputEnded, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            box.Color = mouseover and utility.changecolor(library.theme["Object Background"], 3) or library.theme["Object Background"]
+        end
+    end)
+
+    utility.connect(box.TouchTap, function()
+        -- Trigger createbox interaction (assumed to handle focus)
+    end)
+
+    box.MouseEnter:Connect(function()
+        mouseover = true
+        box.Color = utility.changecolor(library.theme["Object Background"], 3)
+    end)
+
+    box.MouseLeave:Connect(function()
+        mouseover = false
+        box.Color = library.theme["Object Background"]
+    end)
+
+    library.createbox(box, text, function(str) 
+        if str == "" then
+            text.Visible = false
+            placeholdertext.Visible = true
+        else
+            placeholdertext.Visible = false
+            text.Visible = true
+        end
+    end, function(str)
+        library.flags[flag] = str
+        callback(str)
+    end)
+
+    local function set(str)
+        placeholdertext.Visible = str == ""
+        text.Visible = str ~= ""
+        text.Text = str
+        library.flags[flag] = str
+        callback(str)
+    end
+
+    set(default)
+
+    flags[flag] = set
+
+    local boxtypes = utility.table({}, true)
+
+    function boxtypes:Set(str)
+        set(str)
+    end
+
+    return boxtypes
+end
+
+local scaleFactor = services.InputService.TouchEnabled and 1.5 or 1 -- Scale for mobile
+
+function sectiontypes:Slider(options)
+    utility.table(options)
+    local name = options.name
+    local min = options.min or options.minimum or 0
+    local max = options.max or options.maximum or 100
+    local text = options.text or ("[value]/" .. max)
+    local float = options.float or 1
+    local default = options.default and math.clamp(options.default, min, max) or min
+    local flag = options.flag or utility.nextflag()
+    local callback = options.callback or function() end
+
+    local holder = utility.create("Square", {
+        Transparency = 0,
+        Size = UDim2.new(1, 0, 0, 24 * scaleFactor),
+        ZIndex = 7,
+        Thickness = 0,
+        Filled = true,
+        Parent = sectioncontent
+    })
+
+    local title = utility.create("Text", {
+        Text = name,
+        Font = Drawing.Fonts.Plex,
+        Size = 13 * scaleFactor,
+        Position = UDim2.new(0, 0, 0, -2 * scaleFactor),
+        Theme = "Text",
+        ZIndex = 7,
+        Outline = true,
+        Parent = holder
+    })
+
+    section.Size = UDim2.new(1, 0, 0, sectioncontent.AbsoluteContentSize + 28 * scaleFactor)
+
+    return library.createslider(min, max, holder, text, default, float, flag, callback)
+end
+
+function sectiontypes:Dropdown(options)
+    utility.table(options)
+    local name = options.name
+    local default = options.default
+    local content = type(options.content) == "table" and options.content or {}
+    local max = options.max and (options.max > 1 and options.max) or nil
+    local scrollable = options.scrollable
+    local scrollingmax = options.scrollingmax or 10
+    local flag = options.flag or utility.nextflag()
+    local callback = options.callback or function() end
+
+    if not max and type(default) == "table" then
+        default = nil
+    end
+
+    if max and default == nil then
+        default = {}
+    end
+
+    if type(default) == "table" then
+        if max then
+            for i, opt in next, default do
+                if not table.find(content, opt) then
+                    table.remove(default, i)
+                elseif i > max then
+                    table.remove(default, i)
+                end
+            end
+        else
+            default = nil
+        end
+    elseif default ~= nil then
+        if not table.find(content, default) then
+            default = nil
+        end
+    end
+
+    local holder = utility.create("Square", {
+        Transparency = 0,
+        Size = UDim2.new(1, 0, 0, 29 * scaleFactor),
+        Parent = sectioncontent
+    })
+
+    local title = utility.create("Text", {
+        Text = name,
+        Font = Drawing.Fonts.Plex,
+        Size = 13 * scaleFactor,
+        Position = UDim2.new(0, 0, 0, -2 * scaleFactor),
+        Theme = "Text",
+        ZIndex = 7,
+        Outline = true,
+        Parent = holder
+    })
+
+    section.Size = UDim2.new(1, 0, 0, sectioncontent.AbsoluteContentSize + 28 * scaleFactor)
+
+    return library.createdropdown(holder, content, flag, callback, default, max, scrollable, scrollingmax)
+end
+
+function sectiontypes:List(options)
+    utility.table(options)
+    local name = options.name
+    local default = options.default
+    local content = type(options.content) == "table" and options.content or {}
+    local max = options.max and (options.max > 1 and options.max) or nil
+    local scrollable = options.scrollable
+    local scrollingmax = options.scrollingmax or 10
+    local flag = options.flag or utility.nextflag()
+    local callback = options.callback or function() end
+
+    if not max and type(default) == "table" then
+        default = nil
+    end
+
+    if max and default == nil then
+        default = {}
+    end
+
+    if type(default) == "table" then
+        if max then
+            for i, opt in next, default do
+                if not table.find(content, opt) then
+                    table.remove(default, i)
+                elseif i > max then
+                    table.remove(default, i)
+                end
+            end
+        else
+            default = nil
+        end
+    elseif default ~= nil then
+        if not table.find(content, default) then
+            default = nil
+        end
+    end
+
+    local holder = utility.create("Square", {
+        Transparency = 0,
+        Size = UDim2.new(1, 0, 0, 29 * scaleFactor),
+        Parent = sectioncontent
+    })
+
+    local title = utility.create("Text", {
+        Text = name,
+        Font = Drawing.Fonts.Plex,
+        Size = 13 * scaleFactor,
+        Position = UDim2.new(0, 0, 0, -2 * scaleFactor),
+        Theme = "Text",
+        ZIndex = 7,
+        Outline = true,
+        Parent = holder
+    })
+
+    section.Size = UDim2.new(1, 0, 0, sectioncontent.AbsoluteContentSize + 28 * scaleFactor)
+
+    return library.createdropdown(holder, content, flag, callback, default, max, scrollable, scrollingmax, true, section, sectioncontent, column)
+end
+
+function sectiontypes:ColorPicker(options)
+    utility.table(options)
+    local name = options.name
+    local default = options.default or Color3.fromRGB(255, 255, 255)
+    local flag = options.flag or utility.nextflag()
+    local callback = options.callback or function() end
+    local defaultalpha = options.defaultalpha or 1
+
+    local holder = utility.create("Square", {
+        Transparency = 0,
+        Size = UDim2.new(1, 0, 0, 10 * scaleFactor),
+        Position = UDim2.new(0, 0, 0, -1 * scaleFactor),
+        ZIndex = 7,
+        Parent = sectioncontent
+    })
+
+    local title = utility.create("Text", {
+        Text = name,
+        Font = Drawing.Fonts.Plex,
+        Size = 13 * scaleFactor,
+        Position = UDim2.new(0, 0, 0, 0),
+        Theme = "Text",
+        ZIndex = 7,
+        Outline = true,
+        Parent = holder
+    })
+
+    section.Size = UDim2.new(1, 0, 0, sectioncontent.AbsoluteContentSize + 28 * scaleFactor)
+
+    local colorpickers = 0
+
+    local colorpickertypes = library.createcolorpicker(default, defaultalpha, holder, colorpickers, flag, callback)
+
+    function colorpickertypes:ColorPicker(options)
+        colorpickers = colorpickers + 1
+
+        utility.table(options)
+        local default = options.default or Color3.fromRGB(255, 255, 255)
+        local flag = options.flag or utility.nextflag()
+        local callback = options.callback or function() end
+        local defaultalpha = options.defaultalpha or 1
+
+        return library.createcolorpicker(default, defaultalpha, holder, colorpickers, flag, callback)
+    end
+
+    return colorpickertypes
+end
+
+function sectiontypes:Keybind(options)
+    utility.table(options)
+    local name = options.name
+    local default = options.default
+    local blacklist = options.blacklist or {}
+    local flag = options.flag or utility.nextflag()
+    local callback = options.callback or function() end
+
+    local holder = utility.create("Square", {
+        Transparency = 0,
+        Size = UDim2.new(1, 0, 0, 10 * scaleFactor),
+        Position = UDim2.new(0, 0, 0, -1 * scaleFactor),
+        ZIndex = 7,
+        Parent = sectioncontent
+    })
+
+    local title = utility.create("Text", {
+        Text = name,
+        Font = Drawing.Fonts.Plex,
+        Size = 13 * scaleFactor,
+        Position = UDim2.new(0, 0, 0, 0),
+        Theme = "Text",
+        ZIndex = 7,
+        Outline = true,
+        Parent = holder
+    })
+
+    section.Size = UDim2.new(1, 0, 0, sectioncontent.AbsoluteContentSize + 28 * scaleFactor)
+
+    return library.createkeybind(default, holder, blacklist, flag, callback, -1 * scaleFactor)
+end
