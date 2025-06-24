@@ -29,12 +29,12 @@ local Library = {
 
     HudRegistry = {};
 
- FontColor = Color3.fromRGB(220, 200, 255);         -- Soft lavender white for smooth text visibility
-MainColor = Color3.fromRGB(25, 20, 35);            -- Dark purplish-gray background for main panels
-BackgroundColor = Color3.fromRGB(18, 15, 25);      -- Slightly darker base for contrast
-AccentColor = Color3.fromRGB(130, 70, 255);        -- Vivid purple accent (clean glow-style feel)
-OutlineColor = Color3.fromRGB(45, 40, 60);         -- Soft outline, slightly purple-toned
-RiskColor = Color3.fromRGB(200, 70, 120);          -- Magenta-ish red for warning/critical elements
+ FontColor = Color3.fromRGB(220, 200, 255);      
+MainColor = Color3.fromRGB(25, 20, 35);           
+BackgroundColor = Color3.fromRGB(18, 15, 25);   
+AccentColor = Color3.fromRGB(130, 70, 255);     
+OutlineColor = Color3.fromRGB(45, 40, 60);       
+RiskColor = Color3.fromRGB(200, 70, 120);     
 
     Black = Color3.new(0, 0, 0);
     Font = Enum.Font.Fantasy,
