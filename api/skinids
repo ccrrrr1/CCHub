@@ -1,0 +1,10 @@
+return {
+    ["Arcade"] = "rbxassetid://73619512627857",
+    ["BIT8"] = "http://www.roblox.com/asset/?id=13319482321",
+    ["Barbie"] = "http://www.roblox.com/asset/?id=14735499946",
+    ["Blossom"] = "rbxassetid://95657314851054",
+    ["Galactic"] = "rbxassetid://13628031178",
+    ["Etheral"] = "http://www.roblox.com/asset/?id=15387539543",
+    ["Electric"] = "rbxassetid://13054114192",
+    ["Dragon"] = "http://www.roblox.com/asset/?id=14066879065"
+}
