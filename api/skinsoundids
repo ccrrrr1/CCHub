@@ -1,0 +1,6 @@
+return{
+    ["Arcade"] = "rbxassetid://110368146859788",
+    ["BIT8"] = "rbxassetid://13326584088",
+    ["Barbie"] = "rbxassetid://118191571968642",
+    ["Blossom"] = "rbxassetid://118191571968642",
+}
