@@ -1,31 +1,10 @@
 return {
-    ["[TacticalShotgun]"] = {
-        ["Galactic"] = "rbxassetid://13627940755",
-        ["Electric"] = "rbxassetid://13159483436",
-    },
-    ["[Rifle]"] = {
-        ["Electric"] = "rbxassetid://13159322568",
-    },
-    ["[LMG]"] = {
-        ["Electric"] = "rbxassetid://13159912484",
-    },
-    ["[Revolver]"] = {
-        ["Arcade"] = "rbxassetid://123107946997122",
-        ["BIT8"] = "rbxassetid://13319485375",
-        ["Barbie"] = "rbxassetid://14735497126",
-        ["Blossom"] = "rbxassetid://83551643074524",
-        ["Galactic"] = "rbxassetid://13593686802",
-        ["Etheral"] = "rbxassetid://15387622533",
-        ["Electric"] = "rbxassetid://13053929735",
-        ["Dragon"] = "rbxassetid://14066858140"
-    },
-    ["[Double-Barrel SG]"] = {
-        ["Arcade"] = "rbxassetid://124734342708805",
-        ["BIT8"] = "rbxassetid://13320077145",
-        ["Barbie"] = "rbxassetid://14748904899",
-        ["Blossom"] = "rbxassetid://96258792285342",
-        ["Etheral"] = "rbxassetid://15397013170",
-        ["Electric"] = "rbxassetid://13121225310",
-        ["Dragon"] = "rbxassetid://14055424006"
-    },
+    ["Arcade"] = ColorSequence.new(Color3.fromRGB(193, 92, 5)),
+    ["BIT8"] = ColorSequence.new(Color3.fromHSV(0.5, 0.9, 1)),     
+    ["Barbie"] = ColorSequence.new(Color3.fromRGB(255, 112, 236)),  
+    ["Blossom"] = ColorSequence.new(Color3.fromRGB(255, 182, 193)),
+    ["Galactic"] = ColorSequence.new(Color3.fromRGB(255, 0, 0)), 
+    ["Etheral"] = ColorSequence.new(Color3.fromRGB(255, 0, 255)),
+    ["Electric"] = ColorSequence.new(Color3.fromRGB(0, 234, 255)), 
+    ["Dragon"] = ColorSequence.new(Color3.fromRGB(255, 69, 0))  
 }
