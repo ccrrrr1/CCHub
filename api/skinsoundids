@@ -1,31 +1,31 @@
 return {
     ["[TacticalShotgun]"] = {
-        ["Galactic"] = "rbxassetid://13627940755",
-        ["Electric"] = "rbxassetid://13159483436",
+        ["Galactic"] = "rbxassetid://13633363615",
+        ["Electric"] = "rbxassetid://13633363615",
     },
     ["[Rifle]"] = {
-        ["Electric"] = "rbxassetid://13159322568",
+        ["Electric"] = "rbxassetid://128876136252634",
     },
     ["[LMG]"] = {
-        ["Electric"] = "rbxassetid://13159912484",
+        ["Electric"] = "rbxassetid://128423995004738",
     },
     ["[Revolver]"] = {
-        ["Arcade"] = "rbxassetid://123107946997122",
-        ["BIT8"] = "rbxassetid://13319485375",
-        ["Barbie"] = "rbxassetid://14735497126",
-        ["Blossom"] = "rbxassetid://83551643074524",
-        ["Galactic"] = "rbxassetid://13593686802",
-        ["Etheral"] = "rbxassetid://15387622533",
-        ["Electric"] = "rbxassetid://13053929735",
-        ["Dragon"] = "rbxassetid://14066858140"
+        ["Arcade"] = "rbxassetid://110368146859788",
+        ["BIT8"] = "rbxassetid://13326584088",
+        ["Barbie"] = "rbxassetid://118191571968642",
+        ["Blossom"] = "rbxassetid://118191571968642",
+        ["Galactic"] = "rbxassetid://13633362452",
+        ["Etheral"] = "rbxassetid://15399809021",
+        ["Electric"] = "rbxassetid://78903650873779",
+        ["Dragon"] = "rbxassetid://14217797127"
     },
     ["[Double-Barrel SG]"] = {
-        ["Arcade"] = "rbxassetid://124734342708805",
-        ["BIT8"] = "rbxassetid://13320077145",
-        ["Barbie"] = "rbxassetid://14748904899",
-        ["Blossom"] = "rbxassetid://96258792285342",
-        ["Etheral"] = "rbxassetid://15397013170",
-        ["Electric"] = "rbxassetid://13121225310",
-        ["Dragon"] = "rbxassetid://14055424006"
+        ["Arcade"] = "rbxassetid://110368146859788",
+        ["BIT8"] = "rbxassetid://13326578563",
+        ["Barbie"] = "rbxassetid://139081905154614",
+        ["Blossom"] = "rbxassetid://139081905154614",
+        ["Etheral"] = "rbxassetid://15399811188",
+        ["Electric"] = "rbxassetid://125554376391633",
+        ["Dragon"] = "rbxassetid://14217795454"
     },
 }
