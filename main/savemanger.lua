@@ -1,4 +1,3 @@
--- Improved SaveManager to fix unexpected config behavior
 local HttpService = game:GetService("HttpService")
 
 local SaveManager = {
