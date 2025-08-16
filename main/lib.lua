@@ -28,15 +28,16 @@ local Library = {
 
     HudRegistry = {};
 
-    FontColor = Color3.fromRGB(255, 255, 255);
-    MainColor = Color3.fromRGB(28, 28, 28);
-    BackgroundColor = Color3.fromRGB(20, 20, 20);
-    AccentColor = Color3.fromRGB(0, 85, 255);
-    OutlineColor = Color3.fromRGB(50, 50, 50);
-    RiskColor = Color3.fromRGB(255, 50, 50),
+    FontColor      = Color3.fromRGB(220, 200, 255)  -- soft light purple/white
+    MainColor      = Color3.fromRGB(25, 20, 35)     -- dark purplish black
+    BackgroundColor= Color3.fromRGB(18, 15, 25)     -- deep black-purple
+    AccentColor    = Color3.fromRGB(130, 70, 255)   -- vibrant purple for highlights
+    OutlineColor   = Color3.fromRGB(45, 40, 60)     -- muted dark purple/grey
+    RiskColor      = Color3.fromRGB(200, 70, 120)   -- pinkish purple for warnings/errors
+
 
     Black = Color3.new(0, 0, 0);
-    Font = Enum.Font.Code,
+    Font = Enum.Font.SourceSansLight,
 
     OpenedFrames = {};
     DependencyBoxes = {};
