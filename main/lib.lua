@@ -37,7 +37,7 @@ OutlineColor   = Color3.fromRGB(50, 40, 70)
 RiskColor      = Color3.fromRGB(220, 80, 150)   
 
     Black = Color3.new(0, 0, 0);
-    Font = Enum.Font.Fantasy,
+    Font = Enum.Font.Fantasy;
 
     OpenedFrames = {};
     DependencyBoxes = {};
