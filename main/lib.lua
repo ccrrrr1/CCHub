@@ -33,7 +33,7 @@ MainColor       = Color3.fromRGB(35, 35, 35);
 BackgroundColor = Color3.fromRGB(20, 20, 20);
 AccentColor     = Color3.fromRGB(75, 75, 75);
 OutlineColor    = Color3.fromRGB(50, 50, 50);
-RiskColor       = Color3.fromRGB(200, 50, 50);
+RiskColor       = Color3.fromRGB(200, 50, 50),
 
 
 
