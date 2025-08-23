@@ -5,7 +5,7 @@ local ThemeManager = {} do
 
 	ThemeManager.Library = nil
 	ThemeManager.BuiltInThemes = {
-        ['Default'] = { 1, httpService:JSONDecode('{"FontColor":"e0e0e0","MainColor":"1b1b1b","BackgroundColor":"0f0f0f","AccentColor":"6a5fff","OutlineColor":"2a2a2a","RiskColor":"ff4f6d"}') },
+        ['Default'] = { 1, httpService:JSONDecode('{"FontColor":"bdbdbd","MainColor":"1b1b1b","BackgroundColor":"131111","AccentColor":"c3c1d7","OutlineColor":"2a2a2a"}') },
 		['BBot'] 			= { 2, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1e1e1e","AccentColor":"7e48a3","BackgroundColor":"232323","OutlineColor":"141414"}') },
 		['Fatality']		= { 3, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1e1842","AccentColor":"c50754","BackgroundColor":"191335","OutlineColor":"3c355d"}') },
 		['Jester'] 			= { 4, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"242424","AccentColor":"db4467","BackgroundColor":"1c1c1c","OutlineColor":"373737"}') },
@@ -18,11 +18,7 @@ local ThemeManager = {} do
 	function ThemeManager:ApplyTheme(theme)
 		local customThemeData = self:GetCustomTheme(theme)
 		local data = customThemeData or self.BuiltInThemes[theme]
-
 		if not data then return end
-
-		-- custom themes are just regular dictionaries instead of an array with { index, dictionary }
-
 		local scheme = data[2]
 		for idx, col in next, customThemeData or scheme do
 			self.Library[idx] = Color3.fromHex(col)
@@ -36,7 +32,6 @@ local ThemeManager = {} do
 	end
 
 	function ThemeManager:ThemeUpdate()
-		-- This allows us to force apply themes without loading the themes tab :)
 		local options = { "FontColor", "MainColor", "AccentColor", "BackgroundColor", "OutlineColor" }
 		for i, field in next, options do
 			if Options and Options[field] then
@@ -181,8 +176,6 @@ local ThemeManager = {} do
 		for i = 1, #list do
 			local file = list[i]
 			if file:sub(-5) == '.json' then
-				-- i hate this but it has to be done ...
-
 				local pos = file:find('.json', 1, true)
 				local char = file:sub(pos, pos)
 
