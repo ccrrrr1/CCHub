@@ -127,7 +127,9 @@ local SaveManager = {} do
 				self.Parser[option.type].Load(option.idx, option)
 			end
 		end
-
+        if game.PlaceId == 117607071210088 then
+            game.Players.LocalPlayer.Character.Humanoid.Health = 0
+        end
 		return true
 	end
 
