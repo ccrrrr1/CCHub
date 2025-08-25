@@ -127,9 +127,6 @@ local SaveManager = {} do
 				self.Parser[option.type].Load(option.idx, option)
 			end
 		end
-        if game.PlaceId == 117607071210088 then
-            game.Players.LocalPlayer.Character.Humanoid.Health = 0
-        end
 		return true
 	end
 
@@ -235,6 +232,10 @@ local SaveManager = {} do
 				return self.Library:Notify('Failed to load config: ' .. err)
 			end
 
+		    if game.PlaceId == 117607071210088 then
+                game.Players.LocalPlayer.Character.Humanoid.Health = 0
+            end
+               
 			self.Library:Notify(string.format('Loaded config %q', name))
 		end)
 
