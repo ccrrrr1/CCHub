@@ -42,11 +42,9 @@ do
     ThemeManager.Library = nil
     ThemeManager.AppliedToTab = false
     ThemeManager.BuiltInThemes = {
-        ["Default"] = {
-            1,
-            httpService:JSONDecode(
-                [[{"FontColor":"ffffff","MainColor":"191919","AccentColor":"7d55ff","BackgroundColor":"0f0f0f","OutlineColor":"282828"}]]
-            ),
+        ['Default'] = { 
+        1, 
+        httpService:JSONDecode('{"FontColor":"bdbdbd","MainColor":"1b1b1b","BackgroundColor":"131111","AccentColor":"c3c1d7","OutlineColor":"2a2a2a"}') 
         },
         ["BBot"] = {
             2,
