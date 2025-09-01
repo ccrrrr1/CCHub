@@ -107,7 +107,7 @@ local Library = {
     -- colors and font --
     FontColor = Color3.fromRGB(200, 180, 255);
     MainColor = Color3.fromRGB(25, 20, 35);
-    BackgroundColor = Color3.fromRGB((15, 10, 25);
+    BackgroundColor = Color3.fromRGB(15, 10, 25);
 
     AccentColor = Color3.fromRGB(120, 60, 255);
     DisabledAccentColor = Color3.fromRGB(80, 40, 150);
