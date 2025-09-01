@@ -5500,14 +5500,26 @@ function Library:CreateWindow(...)
         BorderColor3 = 'AccentColor';
     });
 
-    local WindowLabel = Library:CreateLabel({
-        Position = UDim2.new(0, 7, 0, 0);
-        Size = UDim2.new(0, 0, 0, 25);
-        Text = Config.Title or '';
-        TextXAlignment = Enum.TextXAlignment.Left;
-        ZIndex = 1;
-        Parent = Inner;
-    });
+local TitleLabel = Library:CreateLabel({
+    Position = UDim2.new(0.5, 0, 0, 0);
+    Size = UDim2.new(0, 0, 0, 25);
+    Text = Config.Title or '';
+    TextXAlignment = Enum.TextXAlignment.Center;
+    ZIndex = 1;
+    Parent = Inner;
+});
+
+                                        local gameName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name or "Game"
+local GameLabel = Library:CreateLabel({
+    Position = UDim2.new(1, -7, 0, 0); 
+    Size = UDim2.new(0, 0, 0, 25);
+    Text = gameName;
+    TextXAlignment = Enum.TextXAlignment.Right;
+    TextColor3 = Color3.fromRGB(255, 0, 0); 
+    ZIndex = 1;
+    Parent = Inner;
+});
+
 
     local MainSectionOuter = Library:Create('Frame', {
         BackgroundColor3 = Library.BackgroundColor;
