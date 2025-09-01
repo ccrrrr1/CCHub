@@ -50,9 +50,11 @@ local SaveManager = {} do
             end,
             Load = function(idx, data)
                 if Options[idx] then
-                    Options[idx]:SetValue({ data.key, data.mode })
+                    Options[idx]:SetValue({data.key, data.mode})
                     if Options[idx].UpdateListener then
                         Options[idx]:UpdateListener()
+                    elseif Options[idx].Rebind then
+                        Options[idx]:Rebind()
                     end
                 end
             end,
