@@ -2023,6 +2023,14 @@ do
         KeyPicker:SetValue({ Info.Default, Info.Mode or 'Toggle' });
         KeyPicker.DisplayFrame = PickOuter
 
+        function KeyPicker:SetVisible(visible)
+           self.Info.NoUI = not visible
+           if self.KeybindsToggle and self.KeybindsToggle.SetVisibility then
+           self.KeybindsToggle:SetVisibility(visible)
+           end
+           self:Update()
+        end
+
         Options[Idx] = KeyPicker;
 
         return self;
