@@ -46,14 +46,14 @@ local ThemeManager = {} do
 	ThemeManager.Library = nil
 	ThemeManager.BuiltInThemes = {
 		['Default'] 		= { 1, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1c1c1c","AccentColor":"0055ff","BackgroundColor":"141414","OutlineColor":"323232"}') },
-		['V2OldTheme']      = { 1, httpService:JSONDecode('{"FontColor":"dcdcdc","MainColor":"1c1c1c","AccentColor":"5c5c5c","BackgroundColor":"101010","OutlineColor":"2e2e2e"}') },
-        ['BBot'] 			= { 2, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1e1e1e","AccentColor":"7e48a3","BackgroundColor":"232323","OutlineColor":"141414"}') },
+		['BBot'] 			= { 2, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1e1e1e","AccentColor":"7e48a3","BackgroundColor":"232323","OutlineColor":"141414"}') },
 		['Fatality']		= { 3, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1e1842","AccentColor":"c50754","BackgroundColor":"191335","OutlineColor":"3c355d"}') },
 		['Jester'] 			= { 4, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"242424","AccentColor":"db4467","BackgroundColor":"1c1c1c","OutlineColor":"373737"}') },
 		['Mint'] 			= { 5, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"242424","AccentColor":"3db488","BackgroundColor":"1c1c1c","OutlineColor":"373737"}') },
 		['Tokyo Night'] 	= { 6, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"191925","AccentColor":"6759b3","BackgroundColor":"16161f","OutlineColor":"323232"}') },
 		['Ubuntu'] 			= { 7, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"3e3e3e","AccentColor":"e2581e","BackgroundColor":"323232","OutlineColor":"191919"}') },
 		['Quartz'] 			= { 8, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"232330","AccentColor":"426e87","BackgroundColor":"1d1b26","OutlineColor":"27232f"}') },
+		['V2OldTheme'] = { 1, httpService:JSONDecode('{"FontColor":"dcdcdc","MainColor":"1c1c1c","AccentColor":"5c5c5c","BackgroundColor":"101010","OutlineColor":"2e2e2e"}') },
 	}
 
 	function ApplyBackgroundVideo(videoLink)
@@ -299,7 +299,7 @@ local ThemeManager = {} do
 		groupbox:AddLabel('accent color'):AddColorPicker('AccentColor', { Default = self.Library.AccentColor });
 		groupbox:AddLabel('outline color'):AddColorPicker('OutlineColor', { Default = self.Library.OutlineColor });
 		groupbox:AddLabel('font color')	:AddColorPicker('FontColor', { Default = self.Library.FontColor });
-		groupbox:AddInput('videoLink', { Text = '.webm Video Background (Link)', Default = self.Library.VideoLink });
+		groupbox:AddInput('videolink', { Text = '.webm Video Background (Link)', Default = self.Library.VideoLink });
 		
 		local ThemesArray = {}
 		for Name, Theme in next, self.BuiltInThemes do
@@ -311,7 +311,7 @@ local ThemeManager = {} do
 		groupbox:AddDivider()
 
 		groupbox:AddDropdown('ThemeManager_ThemeList', { Text = 'theme list', Values = ThemesArray, Default = 1 })
-		groupbox:AddButton('set as default', function()
+		groupbox:AddButton('Set as default', function()
 			self:SaveDefault(self.Library.Options.ThemeManager_ThemeList.Value)
 			self.Library:Notify(string.format('Set default theme to %q', self.Library.Options.ThemeManager_ThemeList.Value))
 		end)
@@ -323,7 +323,7 @@ local ThemeManager = {} do
 		groupbox:AddDivider()
 
 		groupbox:AddInput('ThemeManager_CustomThemeName', { Text = 'custom theme name' })
-		groupbox:AddButton('create theme', function() 
+		groupbox:AddButton('Create theme', function() 
 			self:SaveCustomTheme(self.Library.Options.ThemeManager_CustomThemeName.Value)
 
 			self.Library.Options.ThemeManager_CustomThemeList:SetValues(self:ReloadCustomThemes())
@@ -332,7 +332,7 @@ local ThemeManager = {} do
 
 		groupbox:AddDivider()
 
-		groupbox:AddDropdown('ThemeManager_CustomThemeList', { Text = 'Custom themes', Values = self:ReloadCustomThemes(), AllowNull = true, Default = 1 })
+		groupbox:AddDropdown('ThemeManager_CustomThemeList', { Text = 'custom themes', Values = self:ReloadCustomThemes(), AllowNull = true, Default = 1 })
 		groupbox:AddButton('load theme', function()
 			local name = self.Library.Options.ThemeManager_CustomThemeList.Value
 
