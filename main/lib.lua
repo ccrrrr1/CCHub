@@ -5527,7 +5527,7 @@ function Library:CreateWindow(...)
     Parent = Inner
     })
 
-    GameLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+    GameLabel.TextColor3 = Library.RiskColor,
 
     local MainSectionOuter = Library:Create('Frame', {
         BackgroundColor3 = Library.BackgroundColor;
