@@ -105,26 +105,27 @@ local Library = {
     HudRegistry = {};
 
     -- colors and font --
-    FontColor = Color3.fromRGB(200, 180, 255);
-    MainColor = Color3.fromRGB(25, 20, 35);
-    BackgroundColor = Color3.fromRGB(15, 10, 25);
+    FontColor = Color3.fromRGB(255, 255, 255);
+    MainColor = Color3.fromRGB(28, 28, 28);
+    BackgroundColor = Color3.fromRGB(20, 20, 20);
 
-    AccentColor = Color3.fromRGB(120, 60, 255);
-    DisabledAccentColor = Color3.fromRGB(80, 40, 150);
+    AccentColor = Color3.fromRGB(0, 85, 255);
+    DisabledAccentColor = Color3.fromRGB(142, 142, 142);
 
-    OutlineColor = Color3.fromRGB(60, 20, 70);
-    DisabledOutlineColor = Color3.fromRGB(40, 15, 50);
+    OutlineColor = Color3.fromRGB(50, 50, 50);
+    DisabledOutlineColor = Color3.fromRGB(70, 70, 70);
 
-    DisabledTextColor = Color3.fromRGB(100, 80, 130);
+    DisabledTextColor = Color3.fromRGB(142, 142, 142);
 
     RiskColor = Color3.fromRGB(255, 50, 50);
 
     Black = Color3.new(0, 0, 0);
-    Font = Enum.Font.Fantasy,
+    Font = Enum.Font.Code,
 
     -- frames --
     OpenedFrames = {};
     DependencyBoxes = {};
+    DependencyGroupboxes = {};
 
     -- signals --
     UnloadSignals = {};
