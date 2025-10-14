@@ -5519,6 +5519,14 @@ function Library:CreateWindow(...)
     });
 
     local GameLabel = Library:CreateLabel({
+    Position = UDim2.new(1, -7, 0, 0); 
+    Size = UDim2.new(0, 0, 0, 25);
+    Text = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name;
+    TextXAlignment = Enum.TextXAlignment.Right;
+    TextColor3 = Color3.fromRGB(255, 0, 0); 
+    ZIndex = 1;
+    Parent = Inner;
+    });
     Position = UDim2.new(1, -7, 0, 0),
     Size = UDim2.new(0, 0, 0, 25),
     Text = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name,
@@ -5527,7 +5535,7 @@ function Library:CreateWindow(...)
     Parent = Inner
     })
 
-    GameLabel.TextColor3 = Library.RiskColor,
+    GameLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
 
     local MainSectionOuter = Library:Create('Frame', {
         BackgroundColor3 = Library.BackgroundColor;
