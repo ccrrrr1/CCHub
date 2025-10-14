@@ -45,14 +45,15 @@ local ThemeManager = {} do
 
 	ThemeManager.Library = nil
 	ThemeManager.BuiltInThemes = {
-		['BBot'] 			= { 2, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1e1e1e","AccentColor":"7e48a3","BackgroundColor":"232323","OutlineColor":"141414"}') },
+		['Default'] 		= { 1, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1c1c1c","AccentColor":"0055ff","BackgroundColor":"141414","OutlineColor":"323232"}') },
+		['V2OldTheme']      = { 1, httpService:JSONDecode('{"FontColor":"dcdcdc","MainColor":"1c1c1c","AccentColor":"5c5c5c","BackgroundColor":"101010","OutlineColor":"2e2e2e"}') },
+        ['BBot'] 			= { 2, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1e1e1e","AccentColor":"7e48a3","BackgroundColor":"232323","OutlineColor":"141414"}') },
 		['Fatality']		= { 3, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"1e1842","AccentColor":"c50754","BackgroundColor":"191335","OutlineColor":"3c355d"}') },
 		['Jester'] 			= { 4, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"242424","AccentColor":"db4467","BackgroundColor":"1c1c1c","OutlineColor":"373737"}') },
 		['Mint'] 			= { 5, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"242424","AccentColor":"3db488","BackgroundColor":"1c1c1c","OutlineColor":"373737"}') },
 		['Tokyo Night'] 	= { 6, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"191925","AccentColor":"6759b3","BackgroundColor":"16161f","OutlineColor":"323232"}') },
 		['Ubuntu'] 			= { 7, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"3e3e3e","AccentColor":"e2581e","BackgroundColor":"323232","OutlineColor":"191919"}') },
 		['Quartz'] 			= { 8, httpService:JSONDecode('{"FontColor":"ffffff","MainColor":"232330","AccentColor":"426e87","BackgroundColor":"1d1b26","OutlineColor":"27232f"}') },
-		['V2OldTheme'] = { 1, httpService:JSONDecode('{"FontColor":"dcdcdc","MainColor":"1c1c1c","AccentColor":"5c5c5c","BackgroundColor":"101010","OutlineColor":"2e2e2e"}') },
 	}
 
 	function ApplyBackgroundVideo(videoLink)
@@ -271,20 +272,26 @@ local ThemeManager = {} do
 		for i = 1, #list do
 			local file = list[i]
 			if file:sub(-5) == '.json' then
+				-- i hate this but it has to be done ...
+
 				local pos = file:find('.json', 1, true)
 				local start = pos
+
 				local char = file:sub(pos, pos)
 				while char ~= '/' and char ~= '\\' and char ~= '' do
 					pos = pos - 1
 					char = file:sub(pos, pos)
 				end
+
 				if char == '/' or char == '\\' then
 					table.insert(out, file:sub(pos + 1, start - 1))
 				end
 			end
 		end
+
 		return out
 	end
+
 	--// GUI \\--
 	function ThemeManager:CreateThemeManager(groupbox)
 		groupbox:AddLabel('background color'):AddColorPicker('BackgroundColor', { Default = self.Library.BackgroundColor });
@@ -293,30 +300,39 @@ local ThemeManager = {} do
 		groupbox:AddLabel('outline color'):AddColorPicker('OutlineColor', { Default = self.Library.OutlineColor });
 		groupbox:AddLabel('font color')	:AddColorPicker('FontColor', { Default = self.Library.FontColor });
 		groupbox:AddInput('videoLink', { Text = '.webm Video Background (Link)', Default = self.Library.VideoLink });
+		
 		local ThemesArray = {}
 		for Name, Theme in next, self.BuiltInThemes do
 			table.insert(ThemesArray, Name)
 		end
+
 		table.sort(ThemesArray, function(a, b) return self.BuiltInThemes[a][1] < self.BuiltInThemes[b][1] end)
+
 		groupbox:AddDivider()
+
 		groupbox:AddDropdown('ThemeManager_ThemeList', { Text = 'theme list', Values = ThemesArray, Default = 1 })
-		groupbox:AddButton('Set as default', function()
+		groupbox:AddButton('set as default', function()
 			self:SaveDefault(self.Library.Options.ThemeManager_ThemeList.Value)
 			self.Library:Notify(string.format('Set default theme to %q', self.Library.Options.ThemeManager_ThemeList.Value))
 		end)
+
 		self.Library.Options.ThemeManager_ThemeList:OnChanged(function()
 			self:ApplyTheme(self.Library.Options.ThemeManager_ThemeList.Value)
 		end)
+
 		groupbox:AddDivider()
+
 		groupbox:AddInput('ThemeManager_CustomThemeName', { Text = 'custom theme name' })
-		groupbox:AddButton('Create theme', function() 
+		groupbox:AddButton('create theme', function() 
 			self:SaveCustomTheme(self.Library.Options.ThemeManager_CustomThemeName.Value)
 
 			self.Library.Options.ThemeManager_CustomThemeList:SetValues(self:ReloadCustomThemes())
 			self.Library.Options.ThemeManager_CustomThemeList:SetValue(nil)
 		end)
+
 		groupbox:AddDivider()
-		groupbox:AddDropdown('ThemeManager_CustomThemeList', { Text = 'custom themes', Values = self:ReloadCustomThemes(), AllowNull = true, Default = 1 })
+
+		groupbox:AddDropdown('ThemeManager_CustomThemeList', { Text = 'Custom themes', Values = self:ReloadCustomThemes(), AllowNull = true, Default = 1 })
 		groupbox:AddButton('load theme', function()
 			local name = self.Library.Options.ThemeManager_CustomThemeList.Value
 
@@ -355,12 +371,15 @@ local ThemeManager = {} do
 			local success = pcall(delfile, self.Folder .. '/themes/default.txt')
 			if not success then 
 				return self.Library:Notify('Failed to reset default: delete file error')
-			end	
+			end
+				
 			self.Library:Notify('Set default theme to nothing')
 			self.Library.Options.ThemeManager_CustomThemeList:SetValues(self:ReloadCustomThemes())
 			self.Library.Options.ThemeManager_CustomThemeList:SetValue(nil)
 		end)
+
 		self:LoadDefault()
+
 		local function UpdateTheme() self:ThemeUpdate() end
 		self.Library.Options.BackgroundColor:OnChanged(UpdateTheme)
 		self.Library.Options.MainColor:OnChanged(UpdateTheme)
@@ -368,19 +387,23 @@ local ThemeManager = {} do
 		self.Library.Options.OutlineColor:OnChanged(UpdateTheme)
 		self.Library.Options.FontColor:OnChanged(UpdateTheme)
 	end
+
 	function ThemeManager:CreateGroupBox(tab)
 		assert(self.Library, 'ThemeManager:CreateGroupBox -> Must set ThemeManager.Library first!')
 		return tab:AddLeftGroupbox('Themes')
 	end
+
 	function ThemeManager:ApplyToTab(tab)
 		assert(self.Library, 'ThemeManager:ApplyToTab -> Must set ThemeManager.Library first!')
 		local groupbox = self:CreateGroupBox(tab)
 		self:CreateThemeManager(groupbox)
 	end
+
 	function ThemeManager:ApplyToGroupbox(groupbox)
 		assert(self.Library, 'ThemeManager:ApplyToGroupbox -> Must set ThemeManager.Library first!')
 		self:CreateThemeManager(groupbox)
 	end
+
 	ThemeManager:BuildFolderTree()
 end
 
