@@ -377,109 +377,152 @@ end;
 
 function Library:MakeDraggable(Instance, Cutoff, IsMainWindow)
     Instance.Active = true
-    local Dragging, StartPos, MouseStartPos
+    local dragging = false
+    local mouseStart, uiStart
+    local preview
 
-    local function EndDrag()
-        if Dragging then
-            Dragging = false
-            local Delta = Vector2.new(Mouse.X, Mouse.Y) - MouseStartPos
-            Instance.Position = UDim2.new(
-                StartPos.X.Scale,
-                StartPos.X.Offset + Delta.X,
-                StartPos.Y.Scale,
-                StartPos.Y.Offset + Delta.Y
-            )
-        end
+    local lastMove = tick()
+    
+    local function createPreview()
+        if preview then preview:Destroy() end
+        preview = Instance:Clone()
+        preview.Parent = Instance.Parent
+        preview.ZIndex = 1e5
+        preview.BackgroundTransparency = 0.7
+        preview.BorderSizePixel = 2
+        preview.Name = "DragPreview"
+        preview.Visible = true
+    end
+
+    local function applyFinalPosition()
+        if not dragging then return end
+        local delta = Vector2.new(Mouse.X, Mouse.Y) - mouseStart
+        Instance.Position = UDim2.new(
+            uiStart.X.Scale,
+            uiStart.X.Offset + delta.X,
+            uiStart.Y.Scale,
+            uiStart.Y.Offset + delta.Y
+        )
+        dragging = false
+        if preview then preview:Destroy() preview = nil end
     end
 
     Instance.InputBegan:Connect(function(Input)
         if Input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
         if IsMainWindow and Library.CantDragForced then return end
 
-        local ObjPos = Vector2.new(Mouse.X - Instance.AbsolutePosition.X, Mouse.Y - Instance.AbsolutePosition.Y)
-        if ObjPos.Y > (Cutoff or 40) then return end
+        local objPos = Vector2.new(Mouse.X - Instance.AbsolutePosition.X, Mouse.Y - Instance.AbsolutePosition.Y)
+        if objPos.Y > (Cutoff or 40) then return end
 
-        Dragging = true
-        StartPos = Instance.Position
-        MouseStartPos = Vector2.new(Mouse.X, Mouse.Y)
-
-        local ReleaseConnection
-        ReleaseConnection = InputService.InputEnded:Connect(function(Input2)
-            if Input2.UserInputType == Enum.UserInputType.MouseButton1 then
-                EndDrag()
-                ReleaseConnection:Disconnect()
-            end
-        end)
+        dragging = true
+        mouseStart = Vector2.new(Mouse.X, Mouse.Y)
+        uiStart = Instance.Position
+        createPreview()
+        lastMove = tick()
     end)
 
-    if Library.IsMobile then
-        local DraggingInput, StartTouchPos, StartUIPos
-
-        InputService.TouchStarted:Connect(function(Input)
-            if IsMainWindow and Library.CantDragForced then return end
-            if Library:MouseIsOverFrame(Instance, Input) then
-                DraggingInput = Input
-                StartTouchPos = Input.Position
-                StartUIPos = Instance.Position
-                Dragging = true
+    local heartbeat
+    heartbeat = RunService.Heartbeat:Connect(function()
+        if dragging and preview then
+            local delta = Vector2.new(Mouse.X, Mouse.Y) - mouseStart
+            preview.Position = UDim2.new(
+                uiStart.X.Scale,
+                uiStart.X.Offset + delta.X,
+                uiStart.Y.Scale,
+                uiStart.Y.Offset + delta.Y
+            )
+            if (tick() - lastMove) >= 0.05 then
+                applyFinalPosition()
             end
-        end)
+        end
+    end)
 
-        InputService.TouchEnded:Connect(function(Input)
-            if Input == DraggingInput and Dragging then
-                local Delta = Input.Position - StartTouchPos
-                Instance.Position = UDim2.new(
-                    StartUIPos.X.Scale,
-                    StartUIPos.X.Offset + Delta.X,
-                    StartUIPos.Y.Scale,
-                    StartUIPos.Y.Offset + Delta.Y
-                )
-                Dragging = false
-            end
-        end)
-    end
+    InputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            lastMove = tick()
+        end
+    end)
+
+    InputService.InputEnded:Connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+            applyFinalPosition()
+        end
+    end)
 end
 
 function Library:MakeDraggableUsingParent(Instance, Parent, Cutoff, IsMainWindow)
     Instance.Active = true
-    local Dragging, StartPos, MouseStartPos
+    local dragging = false
+    local mouseStart, uiStart
+    local preview
+    local stopDelay = 0.05
+    local lastMove = tick()
 
-    local function EndDrag()
-        if Dragging then
-            Dragging = false
-            local Delta = Vector2.new(Mouse.X, Mouse.Y) - MouseStartPos
-            Parent.Position = UDim2.new(
-                StartPos.X.Scale,
-                StartPos.X.Offset + Delta.X,
-                StartPos.Y.Scale,
-                StartPos.Y.Offset + Delta.Y
-            )
-        end
+    local function createPreview()
+        if preview then preview:Destroy() end
+        preview = Parent:Clone()
+        preview.Parent = Parent.Parent
+        preview.ZIndex = 1e5
+        preview.BackgroundTransparency = 0.7
+        preview.BorderSizePixel = 2
+        preview.Name = "DragPreview"
+        preview.Visible = true
+    end
+
+    local function applyFinalPosition()
+        if not dragging then return end
+        local delta = Vector2.new(Mouse.X, Mouse.Y) - mouseStart
+        Parent.Position = UDim2.new(
+            uiStart.X.Scale,
+            uiStart.X.Offset + delta.X,
+            uiStart.Y.Scale,
+            uiStart.Y.Offset + delta.Y
+        )
+        dragging = false
+        if preview then preview:Destroy() preview = nil end
     end
 
     Instance.InputBegan:Connect(function(Input)
         if Input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
         if IsMainWindow and Library.CantDragForced then return end
 
-        local ObjPos = Vector2.new(Mouse.X - Parent.AbsolutePosition.X, Mouse.Y - Parent.AbsolutePosition.Y)
-        if ObjPos.Y > (Cutoff or 40) then return end
+        local objPos = Vector2.new(Mouse.X - Parent.AbsolutePosition.X, Mouse.Y - Parent.AbsolutePosition.Y)
+        if objPos.Y > (Cutoff or 40) then return end
 
-        Dragging = true
-        StartPos = Parent.Position
-        MouseStartPos = Vector2.new(Mouse.X, Mouse.Y)
-
-        local ReleaseConnection
-        ReleaseConnection = InputService.InputEnded:Connect(function(Input2)
-            if Input2.UserInputType == Enum.UserInputType.MouseButton1 then
-                EndDrag()
-                ReleaseConnection:Disconnect()
-            end
-        end)
+        dragging = true
+        mouseStart = Vector2.new(Mouse.X, Mouse.Y)
+        uiStart = Parent.Position
+        createPreview()
+        lastMove = tick()
     end)
 
-    if Library.IsMobile then
-        Library:MakeDraggable(Parent, Cutoff, IsMainWindow)
-    end
+    local heartbeat
+    heartbeat = RunService.Heartbeat:Connect(function()
+        if dragging and preview then
+            local delta = Vector2.new(Mouse.X, Mouse.Y) - mouseStart
+            preview.Position = UDim2.new(
+                uiStart.X.Scale,
+                uiStart.X.Offset + delta.X,
+                uiStart.Y.Scale,
+                uiStart.Y.Offset + delta.Y
+            )
+            if (tick() - lastMove) >= stopDelay then
+                applyFinalPosition()
+            end
+        end
+    end)
+
+    InputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            lastMove = tick()
+        end
+    end)
+
+    InputService.InputEnded:Connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+            applyFinalPosition()
+        end
+    end)
 end
 
 function Library:MakeResizable(Instance, MinSize)
