@@ -377,11 +377,12 @@ end;
 
 function Library:MakeDraggable(Instance, Cutoff, IsMainWindow)
     Instance.Active = true
-    local dragging = false
-    local mouseStart, uiStart
-    local preview
-    local lastMove = tick()
-    local stopDelay = 0.15
+    dragging = false
+    mouseStart = nil
+    uiStart = nil
+    preview = nil
+    lastMove = tick()
+    stopDelay = 0.15
 
     local function createPreview()
         if preview then preview:Remove() end
@@ -391,12 +392,13 @@ function Library:MakeDraggable(Instance, Cutoff, IsMainWindow)
         preview.Thickness = 2
         preview.Filled = false
         preview.Size = Vector2.new(Instance.AbsoluteSize.X, Instance.AbsoluteSize.Y)
-        preview.Position = Vector2.new(Mouse.X - Instance.AbsoluteSize.X/2, Mouse.Y - Instance.AbsoluteSize.Y/2)
+        preview.Position = Vector2.new(uiStart.X.Offset, uiStart.Y.Offset)
     end
 
     local function updatePreview()
-        if preview then
-            preview.Position = Vector2.new(Mouse.X - Instance.AbsoluteSize.X/2, Mouse.Y - Instance.AbsoluteSize.Y/2)
+        if preview and dragging then
+            local delta = Vector2.new(Mouse.X, Mouse.Y) - mouseStart
+            preview.Position = Vector2.new(uiStart.X.Offset + delta.X, uiStart.Y.Offset + delta.Y)
             preview.Size = Vector2.new(Instance.AbsoluteSize.X, Instance.AbsoluteSize.Y)
         end
     end
@@ -451,11 +453,12 @@ end
 
 function Library:MakeDraggableUsingParent(Instance, Parent, Cutoff, IsMainWindow)
     Instance.Active = true
-    local dragging = false
-    local mouseStart, uiStart
-    local preview
-    local lastMove = tick()
-    local stopDelay = 0.15
+    dragging = false
+    mouseStart = nil
+    uiStart = nil
+    preview = nil
+    lastMove = tick()
+    stopDelay = 0.15
 
     local function createPreview()
         if preview then preview:Remove() end
@@ -465,12 +468,13 @@ function Library:MakeDraggableUsingParent(Instance, Parent, Cutoff, IsMainWindow
         preview.Thickness = 2
         preview.Filled = false
         preview.Size = Vector2.new(Parent.AbsoluteSize.X, Parent.AbsoluteSize.Y)
-        preview.Position = Vector2.new(Mouse.X - Parent.AbsoluteSize.X/2, Mouse.Y - Parent.AbsoluteSize.Y/2)
+        preview.Position = Vector2.new(uiStart.X.Offset, uiStart.Y.Offset)
     end
 
     local function updatePreview()
-        if preview then
-            preview.Position = Vector2.new(Mouse.X - Parent.AbsoluteSize.X/2, Mouse.Y - Parent.AbsoluteSize.Y/2)
+        if preview and dragging then
+            local delta = Vector2.new(Mouse.X, Mouse.Y) - mouseStart
+            preview.Position = Vector2.new(uiStart.X.Offset + delta.X, uiStart.Y.Offset + delta.Y)
             preview.Size = Vector2.new(Parent.AbsoluteSize.X, Parent.AbsoluteSize.Y)
         end
     end
