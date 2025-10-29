@@ -378,10 +378,10 @@ end;
 function Library:MakeDraggable(Instance, Cutoff, IsMainWindow)
     Instance.Active = true
     local dragging = false
-    local mouseStart, uiStart
+    local mouseStart, uiStart, clickOffset
     local preview
     local lastMove = tick()
-    
+
     local function createPreview()
         if preview then preview:Destroy() end
         preview = Drawing.new("Square")
@@ -390,6 +390,7 @@ function Library:MakeDraggable(Instance, Cutoff, IsMainWindow)
         preview.Thickness = 2
         preview.Filled = false
         preview.Size = Vector2.new(Instance.AbsoluteSize.X, Instance.AbsoluteSize.Y)
+        clickOffset = Vector2.new(Mouse.X - Instance.AbsolutePosition.X, Mouse.Y - Instance.AbsolutePosition.Y)
     end
 
     local function applyFinalPosition()
@@ -408,7 +409,6 @@ function Library:MakeDraggable(Instance, Cutoff, IsMainWindow)
     Instance.InputBegan:Connect(function(Input)
         if Input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
         if IsMainWindow and Library.CantDragForced then return end
-
         local objPos = Vector2.new(Mouse.X - Instance.AbsolutePosition.X, Mouse.Y - Instance.AbsolutePosition.Y)
         if objPos.Y > (Cutoff or 40) then return end
 
@@ -422,7 +422,7 @@ function Library:MakeDraggable(Instance, Cutoff, IsMainWindow)
     RunService.Heartbeat:Connect(function()
         if dragging and preview then
             local delta = Vector2.new(Mouse.X, Mouse.Y) - mouseStart
-            preview.Position = Vector2.new(uiStart.X.Offset + delta.X, uiStart.Y.Offset + delta.Y)
+            preview.Position = Vector2.new(Mouse.X - clickOffset.X, Mouse.Y - clickOffset.Y)
             preview.Size = Vector2.new(Instance.AbsoluteSize.X, Instance.AbsoluteSize.Y)
             if tick() - lastMove >= 0.05 then
                 applyFinalPosition()
@@ -446,7 +446,7 @@ end
 function Library:MakeDraggableUsingParent(Instance, Parent, Cutoff, IsMainWindow)
     Instance.Active = true
     local dragging = false
-    local mouseStart, uiStart
+    local mouseStart, uiStart, clickOffset
     local preview
     local lastMove = tick()
 
@@ -458,6 +458,7 @@ function Library:MakeDraggableUsingParent(Instance, Parent, Cutoff, IsMainWindow
         preview.Thickness = 2
         preview.Filled = false
         preview.Size = Vector2.new(Parent.AbsoluteSize.X, Parent.AbsoluteSize.Y)
+        clickOffset = Vector2.new(Mouse.X - Parent.AbsolutePosition.X, Mouse.Y - Parent.AbsolutePosition.Y)
     end
 
     local function applyFinalPosition()
@@ -476,7 +477,6 @@ function Library:MakeDraggableUsingParent(Instance, Parent, Cutoff, IsMainWindow
     Instance.InputBegan:Connect(function(Input)
         if Input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
         if IsMainWindow and Library.CantDragForced then return end
-
         local objPos = Vector2.new(Mouse.X - Parent.AbsolutePosition.X, Mouse.Y - Parent.AbsolutePosition.Y)
         if objPos.Y > (Cutoff or 40) then return end
 
@@ -490,7 +490,7 @@ function Library:MakeDraggableUsingParent(Instance, Parent, Cutoff, IsMainWindow
     RunService.Heartbeat:Connect(function()
         if dragging and preview then
             local delta = Vector2.new(Mouse.X, Mouse.Y) - mouseStart
-            preview.Position = Vector2.new(uiStart.X.Offset + delta.X, uiStart.Y.Offset + delta.Y)
+            preview.Position = Vector2.new(Mouse.X - clickOffset.X, Mouse.Y - clickOffset.Y)
             preview.Size = Vector2.new(Parent.AbsoluteSize.X, Parent.AbsoluteSize.Y)
             if tick() - lastMove >= 0.05 then
                 applyFinalPosition()
@@ -511,6 +511,7 @@ function Library:MakeDraggableUsingParent(Instance, Parent, Cutoff, IsMainWindow
     end)
 end
 
+            
 function Library:MakeResizable(Instance, MinSize)
     if Library.IsMobile then
         return;
