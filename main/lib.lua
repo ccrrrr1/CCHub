@@ -380,18 +380,16 @@ function Library:MakeDraggable(Instance, Cutoff, IsMainWindow)
     local dragging = false
     local mouseStart, uiStart
     local preview
-
     local lastMove = tick()
     
     local function createPreview()
         if preview then preview:Destroy() end
-        preview = Instance:Clone()
-        preview.Parent = Instance.Parent
-        preview.ZIndex = 1e5
-        preview.BackgroundTransparency = 0.7
-        preview.BorderSizePixel = 2
-        preview.Name = "DragPreview"
+        preview = Drawing.new("Square")
         preview.Visible = true
+        preview.Color = Color3.new(1, 1, 1)
+        preview.Thickness = 2
+        preview.Filled = false
+        preview.Size = Vector2.new(Instance.AbsoluteSize.X, Instance.AbsoluteSize.Y)
     end
 
     local function applyFinalPosition()
@@ -404,7 +402,7 @@ function Library:MakeDraggable(Instance, Cutoff, IsMainWindow)
             uiStart.Y.Offset + delta.Y
         )
         dragging = false
-        if preview then preview:Destroy() preview = nil end
+        if preview then preview:Remove() preview = nil end
     end
 
     Instance.InputBegan:Connect(function(Input)
@@ -421,17 +419,12 @@ function Library:MakeDraggable(Instance, Cutoff, IsMainWindow)
         lastMove = tick()
     end)
 
-    local heartbeat
-    heartbeat = RunService.Heartbeat:Connect(function()
+    RunService.Heartbeat:Connect(function()
         if dragging and preview then
             local delta = Vector2.new(Mouse.X, Mouse.Y) - mouseStart
-            preview.Position = UDim2.new(
-                uiStart.X.Scale,
-                uiStart.X.Offset + delta.X,
-                uiStart.Y.Scale,
-                uiStart.Y.Offset + delta.Y
-            )
-            if (tick() - lastMove) >= 0.05 then
+            preview.Position = Vector2.new(uiStart.X.Offset + delta.X, uiStart.Y.Offset + delta.Y)
+            preview.Size = Vector2.new(Instance.AbsoluteSize.X, Instance.AbsoluteSize.Y)
+            if tick() - lastMove >= 0.05 then
                 applyFinalPosition()
             end
         end
@@ -455,18 +448,16 @@ function Library:MakeDraggableUsingParent(Instance, Parent, Cutoff, IsMainWindow
     local dragging = false
     local mouseStart, uiStart
     local preview
-    local stopDelay = 0.05
     local lastMove = tick()
 
     local function createPreview()
         if preview then preview:Destroy() end
-        preview = Parent:Clone()
-        preview.Parent = Parent.Parent
-        preview.ZIndex = 1e5
-        preview.BackgroundTransparency = 0.7
-        preview.BorderSizePixel = 2
-        preview.Name = "DragPreview"
+        preview = Drawing.new("Square")
         preview.Visible = true
+        preview.Color = Color3.new(1, 1, 1)
+        preview.Thickness = 2
+        preview.Filled = false
+        preview.Size = Vector2.new(Parent.AbsoluteSize.X, Parent.AbsoluteSize.Y)
     end
 
     local function applyFinalPosition()
@@ -479,7 +470,7 @@ function Library:MakeDraggableUsingParent(Instance, Parent, Cutoff, IsMainWindow
             uiStart.Y.Offset + delta.Y
         )
         dragging = false
-        if preview then preview:Destroy() preview = nil end
+        if preview then preview:Remove() preview = nil end
     end
 
     Instance.InputBegan:Connect(function(Input)
@@ -496,17 +487,12 @@ function Library:MakeDraggableUsingParent(Instance, Parent, Cutoff, IsMainWindow
         lastMove = tick()
     end)
 
-    local heartbeat
-    heartbeat = RunService.Heartbeat:Connect(function()
+    RunService.Heartbeat:Connect(function()
         if dragging and preview then
             local delta = Vector2.new(Mouse.X, Mouse.Y) - mouseStart
-            preview.Position = UDim2.new(
-                uiStart.X.Scale,
-                uiStart.X.Offset + delta.X,
-                uiStart.Y.Scale,
-                uiStart.Y.Offset + delta.Y
-            )
-            if (tick() - lastMove) >= stopDelay then
+            preview.Position = Vector2.new(uiStart.X.Offset + delta.X, uiStart.Y.Offset + delta.Y)
+            preview.Size = Vector2.new(Parent.AbsoluteSize.X, Parent.AbsoluteSize.Y)
+            if tick() - lastMove >= 0.05 then
                 applyFinalPosition()
             end
         end
