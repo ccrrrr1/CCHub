@@ -379,8 +379,21 @@ function Library:MakeDraggable(Instance, Cutoff, IsMainWindow)
     Instance.Active = true
     local dragging = false
     local mouseStart, uiStart
+    local preview
+
+    local stopDelay = 0.05 -- time in seconds to wait before applying final position
     local lastMove = tick()
-    local stopDelay = 0.15
+    
+    local function createPreview()
+        if preview then preview:Destroy() end
+        preview = Instance:Clone()
+        preview.Parent = Instance.Parent
+        preview.ZIndex = 1e5
+        preview.BackgroundTransparency = 0.7
+        preview.BorderSizePixel = 2
+        preview.Name = "DragPreview"
+        preview.Visible = true
+    end
 
     local function applyFinalPosition()
         if not dragging then return end
@@ -392,6 +405,7 @@ function Library:MakeDraggable(Instance, Cutoff, IsMainWindow)
             uiStart.Y.Offset + delta.Y
         )
         dragging = false
+        if preview then preview:Destroy() preview = nil end
     end
 
     Instance.InputBegan:Connect(function(Input)
@@ -404,12 +418,21 @@ function Library:MakeDraggable(Instance, Cutoff, IsMainWindow)
         dragging = true
         mouseStart = Vector2.new(Mouse.X, Mouse.Y)
         uiStart = Instance.Position
+        createPreview()
         lastMove = tick()
     end)
 
-    RunService.Heartbeat:Connect(function()
-        if dragging then
-            if tick() - lastMove >= stopDelay then
+    local heartbeat
+    heartbeat = RunService.Heartbeat:Connect(function()
+        if dragging and preview then
+            local delta = Vector2.new(Mouse.X, Mouse.Y) - mouseStart
+            preview.Position = UDim2.new(
+                uiStart.X.Scale,
+                uiStart.X.Offset + delta.X,
+                uiStart.Y.Scale,
+                uiStart.Y.Offset + delta.Y
+            )
+            if (tick() - lastMove) >= stopDelay then
                 applyFinalPosition()
             end
         end
@@ -432,8 +455,20 @@ function Library:MakeDraggableUsingParent(Instance, Parent, Cutoff, IsMainWindow
     Instance.Active = true
     local dragging = false
     local mouseStart, uiStart
+    local preview
+    local stopDelay = 0.05
     local lastMove = tick()
-    local stopDelay = 0.15
+
+    local function createPreview()
+        if preview then preview:Destroy() end
+        preview = Parent:Clone()
+        preview.Parent = Parent.Parent
+        preview.ZIndex = 1e5
+        preview.BackgroundTransparency = 0.7
+        preview.BorderSizePixel = 2
+        preview.Name = "DragPreview"
+        preview.Visible = true
+    end
 
     local function applyFinalPosition()
         if not dragging then return end
@@ -445,6 +480,7 @@ function Library:MakeDraggableUsingParent(Instance, Parent, Cutoff, IsMainWindow
             uiStart.Y.Offset + delta.Y
         )
         dragging = false
+        if preview then preview:Destroy() preview = nil end
     end
 
     Instance.InputBegan:Connect(function(Input)
@@ -457,12 +493,21 @@ function Library:MakeDraggableUsingParent(Instance, Parent, Cutoff, IsMainWindow
         dragging = true
         mouseStart = Vector2.new(Mouse.X, Mouse.Y)
         uiStart = Parent.Position
+        createPreview()
         lastMove = tick()
     end)
 
-    RunService.Heartbeat:Connect(function()
-        if dragging then
-            if tick() - lastMove >= stopDelay then
+    local heartbeat
+    heartbeat = RunService.Heartbeat:Connect(function()
+        if dragging and preview then
+            local delta = Vector2.new(Mouse.X, Mouse.Y) - mouseStart
+            preview.Position = UDim2.new(
+                uiStart.X.Scale,
+                uiStart.X.Offset + delta.X,
+                uiStart.Y.Scale,
+                uiStart.Y.Offset + delta.Y
+            )
+            if (tick() - lastMove) >= stopDelay then
                 applyFinalPosition()
             end
         end
@@ -480,7 +525,6 @@ function Library:MakeDraggableUsingParent(Instance, Parent, Cutoff, IsMainWindow
         end
     end)
 end
-
             
 function Library:MakeResizable(Instance, MinSize)
     if Library.IsMobile then
