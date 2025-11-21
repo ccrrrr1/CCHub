@@ -1837,208 +1837,189 @@ do
             end);
         end
 
-function KeyPicker:Update()
-    if Info.NoUI then
-        return;
-    end;
-    local State = KeyPicker:GetState();
-    local ShowToggle = Library.ShowToggleFrameInKeybinds and KeyPicker.Mode == 'Toggle';
-    if KeybindsToggle.Loaded then
-        if KeyPicker.Value == "" or KeyPicker.Value == "None" then
-            KeybindsToggle:SetVisibility(false)
-            DisplayLabel.Text = ""
-        else
-            KeybindsToggle:SetNormal(not ShowToggle)
-            KeybindsToggle:SetVisibility(true);
-            KeybindsToggle:SetText(string.format('[%s] %s (%s)', tostring(KeyPicker.Value), Info.Text, KeyPicker.Mode));
-            KeybindsToggle:Display(State);
-            DisplayLabel.Text = KeyPicker.Value
-        end
-    end
-    local YSize = 0
-    local XSize = 0
-    for _, Frame in next, Library.KeybindContainer:GetChildren() do
-        if Frame:IsA('Frame') and Frame.Visible then
-            local Label = Frame:FindFirstChild("TextLabel", true)
-            if not Label then continue end
-            local LabelSize = Label.TextBounds.X + 20
-            if (LabelSize > XSize) then
-                XSize = LabelSize;
-            end
-            YSize = YSize + 18;
-        end;
-    end;
-    Library.KeybindFrame.Size = UDim2.new(0, math.max(XSize + 10, 220), 0, (YSize + 23 + 6) * DPIScale);
-    UpdateMenuOuterPos();
+        function KeyPicker:Update()
+if Info.NoUI then
+return;
 end;
-
+local State = KeyPicker:GetState();
+local ShowToggle = Library.ShowToggleFrameInKeybinds and KeyPicker.Mode == 'Toggle';
+if KeybindsToggle.Loaded then
+if KeyPicker.Value == "" or KeyPicker.Value == "None" then
+KeybindsToggle:SetVisibility(false)
+else
+KeybindsToggle:SetNormal(not ShowToggle)
+KeybindsToggle:SetVisibility(true);
+KeybindsToggle:SetText(string.format('[%s] %s (%s)', tostring(KeyPicker.Value), Info.Text, KeyPicker.Mode));
+KeybindsToggle:Display(State);
+end
+end
+local YSize = 0
+local XSize = 0
+for _, Frame in next, Library.KeybindContainer:GetChildren() do
+if Frame:IsA('Frame') and Frame.Visible then
+local Label = Frame:FindFirstChild("TextLabel", true)
+if not Label then continue end
+local LabelSize = Label.TextBounds.X + 20
+if (LabelSize > XSize) then
+XSize = LabelSize;
+end
+YSize = YSize + 18;
+end;
+end;
+Library.KeybindFrame.Size = UDim2.new(0, math.max(XSize + 10, 220), 0, (YSize + 23 + 6) * DPIScale);
+UpdateMenuOuterPos();
+end;
 function KeyPicker:GetState()
-    if KeyPicker.Mode == 'Always' then
-        return true;
-    elseif KeyPicker.Mode == 'Hold' then
-        if KeyPicker.Value == 'None' or KeyPicker.Value == "" then
-            return false;
-        end
-        local Key = KeyPicker.Value;
-        if SpecialKeys[Key] ~= nil then
-            return InputService:IsMouseButtonPressed(SpecialKeys[Key]) and not InputService:GetFocusedTextBox();
-        else
-            return InputService:IsKeyDown(Enum.KeyCode[KeyPicker.Value]) and not InputService:GetFocusedTextBox();
-        end;
-    else
-        return KeyPicker.Toggled;
-    end;
+if KeyPicker.Mode == 'Always' then
+return true;
+elseif KeyPicker.Mode == 'Hold' then
+if KeyPicker.Value == 'None' or KeyPicker.Value == "" then
+return false;
+end
+local Key = KeyPicker.Value;
+if SpecialKeys[Key] ~= nil then
+return InputService:IsMouseButtonPressed(SpecialKeys[Key]) and not InputService:GetFocusedTextBox();
+else
+return InputService:IsKeyDown(Enum.KeyCode[KeyPicker.Value]) and not InputService:GetFocusedTextBox();
 end;
-
+else
+return KeyPicker.Toggled;
+end;
+end;
 function KeyPicker:SetValue(Data)
-    local Key, Mode = Data[1], Data[2];
-    local IsKeyValid, UserInputType = pcall(function()
-        if SpecialKeys[Key] == nil then
-            return Enum.KeyCode[Key];
-        end;
-        return SpecialKeys[Key];
-    end);
-    if Key == nil or Key == "" then
-        KeyPicker.Value = ""
-        DisplayLabel.Text = ""
-    elseif IsKeyValid then
-        KeyPicker.Value = Key
-        DisplayLabel.Text = Key
-    else
-        KeyPicker.Value = "Unknown"
-        DisplayLabel.Text = KeyPicker.Value
-    end
-    if Mode ~= nil and ModeButtons[Mode] ~= nil then
-        ModeButtons[Mode]:Select();
-    end;
-    PickOuter.Size = UDim2.new(0, 999999, 0, 18);
-    RenderStepped:Wait();
-    PickOuter.Size = UDim2.new(0, math.max(28, DisplayLabel.TextBounds.X + 8), 0, 18);
-    KeyPicker:Update();
-    Library:SafeCallback(KeyPicker.ChangedCallback, UserInputType)
-    Library:SafeCallback(KeyPicker.Changed, UserInputType)
+local Key, Mode = Data[1], Data[2];
+local IsKeyValid, UserInputType = pcall(function()
+if SpecialKeys[Key] == nil then
+return Enum.KeyCode[Key];
 end;
-
+return SpecialKeys[Key];
+end);
+if Key == nil or Key == "" then
+KeyPicker.Value = ""
+elseif IsKeyValid then
+KeyPicker.Value = Key
+else
+KeyPicker.Value = "Unknown"
+end
+if Mode ~= nil and ModeButtons[Mode] ~= nil then
+ModeButtons[Mode]:Select();
+end;
+PickOuter.Size = UDim2.new(0, 999999, 0, 18);
+RenderStepped:Wait();
+PickOuter.Size = UDim2.new(0, math.max(28, DisplayLabel.TextBounds.X + 8), 0, 18);
+KeyPicker:Update();
+Library:SafeCallback(KeyPicker.ChangedCallback, UserInputType)
+Library:SafeCallback(KeyPicker.Changed, UserInputType)
+end;
 function KeyPicker:OnClick(Callback)
-    KeyPicker.Clicked = Callback
+KeyPicker.Clicked = Callback
 end
-
 function KeyPicker:OnChanged(Callback)
-    KeyPicker.Changed = Callback
-    Callback(KeyPicker.Value)
+KeyPicker.Changed = Callback
+Callback(KeyPicker.Value)
 end
-
 if ParentObj.Addons then
-    table.insert(ParentObj.Addons, KeyPicker)
+table.insert(ParentObj.Addons, KeyPicker)
 end
-
 function KeyPicker:DoClick()
-    if ParentObj.Type == 'Toggle' and KeyPicker.SyncToggleState then
-        ParentObj:SetValue(not ParentObj.Value)
-    end
-    Library:SafeCallback(KeyPicker.Callback, KeyPicker.Toggled)
-    Library:SafeCallback(KeyPicker.Clicked, KeyPicker.Toggled)
+if ParentObj.Type == 'Toggle' and KeyPicker.SyncToggleState then
+ParentObj:SetValue(not ParentObj.Value)
 end
-
+Library:SafeCallback(KeyPicker.Callback, KeyPicker.Toggled)
+Library:SafeCallback(KeyPicker.Clicked, KeyPicker.Toggled)
+end
 function KeyPicker:SetModePickerVisibility(bool)
-    ModeSelectOuter.Visible = bool;
+ModeSelectOuter.Visible = bool;
 end
-
 function KeyPicker:GetModePickerVisibility()
-    return ModeSelectOuter.Visible;
+return ModeSelectOuter.Visible;
 end
-
 local Picking = false;
 PickOuter.InputBegan:Connect(function(Input)
-    if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Library:MouseIsOverOpenedFrame() then
-        Picking = true;
-        DisplayLabel.Text = '';
-        local Break;
-        local Text = '';
-        task.spawn(function()
-            while (not Break) do
-                if Text == '...' then
-                    Text = '';
-                end;
-                Text = Text .. '.';
-                DisplayLabel.Text = Text;
-                task.wait(0.4);
-            end;
-        end);
-        task.wait(0.2);
-        InputService.InputBegan:Once(function(Input)
-            local Key;
-            if SpecialKeysInput[Input.UserInputType] ~= nil then
-                Key = SpecialKeysInput[Input.UserInputType];
-            elseif Input.UserInputType == Enum.UserInputType.Keyboard then
-                Key = Input.KeyCode == Enum.KeyCode.Escape and "None" or Input.KeyCode.Name
-            end
-            Break = true;
-            Picking = false;
-            KeyPicker:SetValue({ Key, KeyPicker.Mode })
-        end);
-    elseif Input.UserInputType == Enum.UserInputType.MouseButton2 and not Library:MouseIsOverOpenedFrame() then
-        local visible = KeyPicker:GetModePickerVisibility()
-        if visible == false then
-            for _, option in next, Options do
-                if option.Type == "KeyPicker" then
-                    option:SetModePickerVisibility(false)
-                end
-            end
-        end
-        KeyPicker:SetModePickerVisibility(not visible)
-    end;
+if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Library:MouseIsOverOpenedFrame() then
+Picking = true;
+DisplayLabel.Text = '';
+local Break;
+local Text = '';
+task.spawn(function()
+while (not Break) do
+if Text == '...' then
+Text = '';
+end;
+Text = Text .. '.';
+DisplayLabel.Text = Text;
+task.wait(0.4);
+end;
+end);
+task.wait(0.2);
+InputService.InputBegan:Once(function(Input)
+local Key;
+if SpecialKeysInput[Input.UserInputType] ~= nil then
+Key = SpecialKeysInput[Input.UserInputType];
+elseif Input.UserInputType == Enum.UserInputType.Keyboard then
+Key = Input.KeyCode == Enum.KeyCode.Escape and "None" or Input.KeyCode.Name
+end
+Break = true;
+Picking = false;
+KeyPicker:SetValue({ Key, KeyPicker.Mode })
+end);
+elseif Input.UserInputType == Enum.UserInputType.MouseButton2 and not Library:MouseIsOverOpenedFrame() then
+local visible = KeyPicker:GetModePickerVisibility()
+if visible == false then
+for _, option in next, Options do
+if option.Type == "KeyPicker" then
+option:SetModePickerVisibility(false)
+end
+end
+end
+KeyPicker:SetModePickerVisibility(not visible)
+end;
 end)
-
 Library:GiveSignal(InputService.InputBegan:Connect(function(Input)
-    if KeyPicker.Value == "Unknown" or KeyPicker.Value == "" then return end
-    if (not Picking) and (not InputService:GetFocusedTextBox()) then
-        if KeyPicker.Mode == 'Toggle' then
-            local Key = KeyPicker.Value;
-            if Input.UserInputType == Enum.UserInputType.Keyboard then
-                if Input.KeyCode.Name == Key then
-                    KeyPicker.Toggled = not KeyPicker.Toggled;
-                    KeyPicker:DoClick()
-                end;
-            elseif SpecialKeysInput[Input.UserInputType] == Key then
-                KeyPicker.Toggled = not KeyPicker.Toggled;
-                KeyPicker:DoClick();
-            end;
-        end;
-        KeyPicker:Update();
-    end;
-    if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-        local AbsPos, AbsSize = ModeSelectOuter.AbsolutePosition, ModeSelectOuter.AbsoluteSize;
-        if Mouse.X < AbsPos.X or Mouse.X > AbsPos.X + AbsSize.X
-        or Mouse.Y < (AbsPos.Y - 20 - 1) or Mouse.Y > AbsPos.Y + AbsSize.Y then
-            KeyPicker:SetModePickerVisibility(false);
-        end;
-    end;
+if KeyPicker.Value == "Unknown" or KeyPicker.Value == "" then return end
+if (not Picking) and (not InputService:GetFocusedTextBox()) then
+if KeyPicker.Mode == 'Toggle' then
+local Key = KeyPicker.Value;
+if Input.UserInputType == Enum.UserInputType.Keyboard then
+if Input.KeyCode.Name == Key then
+KeyPicker.Toggled = not KeyPicker.Toggled;
+KeyPicker:DoClick()
+end;
+elseif SpecialKeysInput[Input.UserInputType] == Key then
+KeyPicker.Toggled = not KeyPicker.Toggled;
+KeyPicker:DoClick();
+end;
+end;
+KeyPicker:Update();
+end;
+if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+local AbsPos, AbsSize = ModeSelectOuter.AbsolutePosition, ModeSelectOuter.AbsoluteSize;
+if Mouse.X < AbsPos.X or Mouse.X > AbsPos.X + AbsSize.X
+or Mouse.Y < (AbsPos.Y - 20 - 1) or Mouse.Y > AbsPos.Y + AbsSize.Y then
+KeyPicker:SetModePickerVisibility(false);
+end;
+end;
 end))
-
 Library:GiveSignal(InputService.InputEnded:Connect(function(Input)
-    if (not Picking) then
-        KeyPicker:Update();
-    end;
+if (not Picking) then
+KeyPicker:Update();
+end;
 end))
-
 KeyPicker:SetValue({ Info.Default, Info.Mode or 'Toggle' });
 KeyPicker.DisplayFrame = PickOuter
-
 function KeyPicker:SetVisible(visible)
-    self.Info.NoUI = not visible
-    PickOuter.Visible = visible
-    if self.KeybindsToggle and self.KeybindsToggle.SetVisibility then
-        if KeyPicker.Value ~= "" and KeyPicker.Value ~= "None" then
-            self.KeybindsToggle:SetVisibility(visible)
-        else
-            self.KeybindsToggle:SetVisibility(false)
-        end
-    end
-    KeyPicker:Update()
+self.Info.NoUI = not visible
+if self.KeybindsToggle and self.KeybindsToggle.SetVisibility then
+if KeyPicker.Value ~= "" and KeyPicker.Value ~= "None" then
+self.KeybindsToggle:SetVisibility(visible)
+else
+self.KeybindsToggle:SetVisibility(false)
 end
-
+end
+self:Update()
+end
 Options[Idx] = KeyPicker
+                            
 
     function BaseAddonsFuncs:AddDropdown(Idx, Info)
         Info.ReturnInstanceInstead = if typeof(Info.ReturnInstanceInstead) == "boolean" then Info.ReturnInstanceInstead else false;
