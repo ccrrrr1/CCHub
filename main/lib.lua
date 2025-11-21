@@ -1966,7 +1966,7 @@ end
 
 local Picking = false;
 
-    PickOuter.InputBegan:Connect(function(Input)
+                                    PickOuter.InputBegan:Connect(function(Input)
     if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Library:MouseIsOverOpenedFrame() then
         Picking = true
         DisplayLabel.Text = ''
@@ -1985,14 +1985,15 @@ local Picking = false;
         end)
 
         local InputConn
-        InputConn = InputService.InputBegan:Connect(function(Input)
+        InputConn = InputService.InputBegan:Connect(function(KeyInput, GameProcessed)
             if not Picking then return end
+            if KeyInput.UserInputType == Enum.UserInputType.MouseButton1 then return end
 
             local Key
-            if SpecialKeysInput[Input.UserInputType] ~= nil then
-                Key = SpecialKeysInput[Input.UserInputType]
-            elseif Input.UserInputType == Enum.UserInputType.Keyboard then
-                Key = Input.KeyCode == Enum.KeyCode.Escape and "None" or Input.KeyCode.Name
+            if SpecialKeysInput[KeyInput.UserInputType] ~= nil then
+                Key = SpecialKeysInput[KeyInput.UserInputType]
+            elseif KeyInput.UserInputType == Enum.UserInputType.Keyboard then
+                Key = KeyInput.KeyCode == Enum.KeyCode.Escape and "None" or KeyInput.KeyCode.Name
             end
 
             Break = true
