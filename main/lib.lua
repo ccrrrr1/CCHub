@@ -1966,12 +1966,11 @@ end
 
 local Picking = false;
 
-PickOuter.InputBegan:Connect(function(Input)
+    PickOuter.InputBegan:Connect(function(Input)
     if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Library:MouseIsOverOpenedFrame() then
-        Picking = true;
-
+        Picking = true
         DisplayLabel.Text = ''
-        local Break;
+        local Break
         local Text = ''
 
         task.spawn(function()
@@ -1985,26 +1984,25 @@ PickOuter.InputBegan:Connect(function(Input)
             end
         end)
 
-        task.wait(0.2)
+        local InputConn
+        InputConn = InputService.InputBegan:Connect(function(Input)
+            if not Picking then return end
 
-        InputService.InputBegan:Once(function(Input)
-            local Key;
-
+            local Key
             if SpecialKeysInput[Input.UserInputType] ~= nil then
-                Key = SpecialKeysInput[Input.UserInputType];
+                Key = SpecialKeysInput[Input.UserInputType]
             elseif Input.UserInputType == Enum.UserInputType.Keyboard then
                 Key = Input.KeyCode == Enum.KeyCode.Escape and "None" or Input.KeyCode.Name
             end
 
-            Break = true;
-            Picking = false;
-
+            Break = true
+            Picking = false
+            InputConn:Disconnect()
             KeyPicker:SetValue({ Key, KeyPicker.Mode })
         end)
 
     elseif Input.UserInputType == Enum.UserInputType.MouseButton2 and not Library:MouseIsOverOpenedFrame() then
         local visible = KeyPicker:GetModePickerVisibility()
-        
         if visible == false then
             for _, option in next, Options do
                 if option.Type == "KeyPicker" then
@@ -2012,10 +2010,10 @@ PickOuter.InputBegan:Connect(function(Input)
                 end
             end
         end
-
         KeyPicker:SetModePickerVisibility(not visible)
-    end;
+    end
 end)
+
 
 Library:GiveSignal(InputService.InputBegan:Connect(function(Input)
     if KeyPicker.Value == "Unknown" then return end
