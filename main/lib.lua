@@ -1838,40 +1838,44 @@ do
         end
 
         function KeyPicker:Update()
-            if Info.NoUI then
-                return;
-            end;
+    if Info.NoUI then
+        return;
+    end;
 
-            local State = KeyPicker:GetState();
-            local ShowToggle = Library.ShowToggleFrameInKeybinds and KeyPicker.Mode == 'Toggle';
+    local State = KeyPicker:GetState();
+    local ShowToggle = Library.ShowToggleFrameInKeybinds and KeyPicker.Mode == 'Toggle';
 
-            if KeybindsToggle.Loaded then
-                KeybindsToggle:SetNormal(not ShowToggle)
+    if KeybindsToggle.Loaded then
+        if KeyPicker.Value == "" then
+            KeybindsToggle:SetVisibility(false)
+        else
+            KeybindsToggle:SetNormal(not ShowToggle)
+            KeybindsToggle:SetVisibility(true);
+            KeybindsToggle:SetText(string.format('[%s] %s (%s)', tostring(KeyPicker.Value), Info.Text, KeyPicker.Mode));
+            KeybindsToggle:Display(State);
+        end
+    end
 
-                KeybindsToggle:SetVisibility(true);
-                KeybindsToggle:SetText(string.format('[%s] %s (%s)', tostring(KeyPicker.Value), Info.Text, KeyPicker.Mode));
-                KeybindsToggle:Display(State);
+    local YSize = 0
+    local XSize = 0
+
+    for _, Frame in next, Library.KeybindContainer:GetChildren() do
+        if Frame:IsA('Frame') and Frame.Visible then
+            YSize = YSize + 18;
+            local Label = Frame:FindFirstChild("TextLabel", true)
+            if not Label then continue end
+
+            local LabelSize = Label.TextBounds.X + 20
+            if (LabelSize > XSize) then
+                XSize = LabelSize;
             end
-
-            local YSize = 0
-            local XSize = 0
-
-            for _, Frame in next, Library.KeybindContainer:GetChildren() do
-                if Frame:IsA('Frame') and Frame.Visible then
-                    YSize = YSize + 18;
-                    local Label = Frame:FindFirstChild("TextLabel", true)
-                    if not Label then continue end
-                    
-                    local LabelSize = Label.TextBounds.X + 20
-                    if (LabelSize > XSize) then
-                        XSize = LabelSize;
-                    end
-                end;
-            end;
-
-            Library.KeybindFrame.Size = UDim2.new(0, math.max(XSize + 10, 220), 0, (YSize + 23 + 6) * DPIScale);
-            UpdateMenuOuterPos();
         end;
+    end;
+
+    Library.KeybindFrame.Size = UDim2.new(0, math.max(XSize + 10, 220), 0, (YSize + 23 + 6) * DPIScale);
+    UpdateMenuOuterPos();
+end;
+
 
         function KeyPicker:GetState()
             if KeyPicker.Mode == 'Always' then
@@ -1894,27 +1898,21 @@ do
             end;
         end;
 
-      function KeyPicker:SetValue(Data)
+ function KeyPicker:SetValue(Data)
     local Key, Mode = Data[1], Data[2];
 
     local IsKeyValid, UserInputType = pcall(function() 
         if SpecialKeys[Key] == nil then 
             return Enum.KeyCode[Key];
         end; 
-
         return SpecialKeys[Key]; 
     end);
 
     if Key == nil or Key == "" then
-        DisplayLabel.Text = ""
         KeyPicker.Value = ""
-
-    elseif IsKeyValid  then
-        DisplayLabel.Text = Key
+    elseif IsKeyValid then
         KeyPicker.Value = Key
-
     else
-        DisplayLabel.Text = "Unknown"
         KeyPicker.Value = "Unknown"
     end
 
@@ -1931,7 +1929,6 @@ do
     Library:SafeCallback(KeyPicker.ChangedCallback, UserInputType)
     Library:SafeCallback(KeyPicker.Changed, UserInputType)
 end;
-
 
         function KeyPicker:OnClick(Callback)
             KeyPicker.Clicked = Callback
