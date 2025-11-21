@@ -1894,43 +1894,44 @@ do
             end;
         end;
 
-        function KeyPicker:SetValue(Data)
-            local Key, Mode = Data[1], Data[2];
+      function KeyPicker:SetValue(Data)
+    local Key, Mode = Data[1], Data[2];
 
-            local IsKeyValid, UserInputType = pcall(function() 
-                if SpecialKeys[Key] == nil then 
-                    return Enum.KeyCode[Key];
-                end; 
+    local IsKeyValid, UserInputType = pcall(function() 
+        if SpecialKeys[Key] == nil then 
+            return Enum.KeyCode[Key];
+        end; 
 
-                return SpecialKeys[Key]; 
-            end);
+        return SpecialKeys[Key]; 
+    end);
 
-            if Key == nil then
-                DisplayLabel.Text = "None";
-                KeyPicker.Value = "None";
+    if Key == nil or Key == "" then
+        DisplayLabel.Text = ""
+        KeyPicker.Value = ""
 
-            elseif IsKeyValid  then
-                DisplayLabel.Text = Key;
-                KeyPicker.Value = Key;
+    elseif IsKeyValid  then
+        DisplayLabel.Text = Key
+        KeyPicker.Value = Key
 
-            else
-                DisplayLabel.Text = "Unknown";
-                KeyPicker.Value = "Unknown";
-            end
+    else
+        DisplayLabel.Text = "Unknown"
+        KeyPicker.Value = "Unknown"
+    end
 
-            if Mode ~= nil and ModeButtons[Mode] ~= nil then 
-                ModeButtons[Mode]:Select(); 
-            end;
+    if Mode ~= nil and ModeButtons[Mode] ~= nil then 
+        ModeButtons[Mode]:Select(); 
+    end;
 
-            PickOuter.Size = UDim2.new(0, 999999, 0, 18);
-            RenderStepped:Wait();
-            PickOuter.Size = UDim2.new(0, math.max(28, DisplayLabel.TextBounds.X + 8), 0, 18);
+    PickOuter.Size = UDim2.new(0, 999999, 0, 18);
+    RenderStepped:Wait();
+    PickOuter.Size = UDim2.new(0, math.max(28, DisplayLabel.TextBounds.X + 8), 0, 18);
 
-            KeyPicker:Update();
+    KeyPicker:Update();
 
-            Library:SafeCallback(KeyPicker.ChangedCallback, UserInputType)
-            Library:SafeCallback(KeyPicker.Changed, UserInputType)
-        end;
+    Library:SafeCallback(KeyPicker.ChangedCallback, UserInputType)
+    Library:SafeCallback(KeyPicker.Changed, UserInputType)
+end;
+
 
         function KeyPicker:OnClick(Callback)
             KeyPicker.Clicked = Callback
