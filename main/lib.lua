@@ -1836,7 +1836,8 @@ do
                 end;
             end);
         end
-function KeyPicker:Update()
+
+                                    function KeyPicker:Update()
     if Info.NoUI then
         return;
     end;
@@ -1969,8 +1970,22 @@ PickOuter.InputBegan:Connect(function(Input)
     if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Library:MouseIsOverOpenedFrame() then
         Picking = true;
 
+        DisplayLabel.Text = ''
         local Break;
-        DisplayLabel.Text = KeyPicker.Value
+        local Text = ''
+
+        task.spawn(function()
+            while not Break do
+                if Text == '...' then
+                    Text = ''
+                end
+                Text = Text .. '.'
+                DisplayLabel.Text = Text
+                task.wait(0.4)
+            end
+        end)
+
+        task.wait(0.2)
 
         InputService.InputBegan:Once(function(Input)
             local Key;
@@ -1983,9 +1998,9 @@ PickOuter.InputBegan:Connect(function(Input)
 
             Break = true;
             Picking = false;
-            
+
             KeyPicker:SetValue({ Key, KeyPicker.Mode })
-        end);
+        end)
 
     elseif Input.UserInputType == Enum.UserInputType.MouseButton2 and not Library:MouseIsOverOpenedFrame() then
         local visible = KeyPicker:GetModePickerVisibility()
@@ -2017,27 +2032,27 @@ Library:GiveSignal(InputService.InputBegan:Connect(function(Input)
             elseif SpecialKeysInput[Input.UserInputType] == Key then
                 KeyPicker.Toggled = not KeyPicker.Toggled;
                 KeyPicker:DoClick();
-            end;
-        end;
+            end
+        end
 
-        KeyPicker:Update();
-    end;
+        KeyPicker:Update()
+    end
 
     if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-        local AbsPos, AbsSize = ModeSelectOuter.AbsolutePosition, ModeSelectOuter.AbsoluteSize;
+        local AbsPos, AbsSize = ModeSelectOuter.AbsolutePosition, ModeSelectOuter.AbsoluteSize
 
         if Mouse.X < AbsPos.X or Mouse.X > AbsPos.X + AbsSize.X
             or Mouse.Y < (AbsPos.Y - 20 - 1) or Mouse.Y > AbsPos.Y + AbsSize.Y then
 
-            KeyPicker:SetModePickerVisibility(false);
-        end;
-    end;
+            KeyPicker:SetModePickerVisibility(false)
+        end
+    end
 end))
 
 Library:GiveSignal(InputService.InputEnded:Connect(function(Input)
-    if (not Picking) then
-        KeyPicker:Update();
-    end;
+    if not Picking then
+        KeyPicker:Update()
+    end
 end))
         
 KeyPicker:SetValue({ Info.Default, Info.Mode or 'Toggle' });
@@ -2055,7 +2070,7 @@ Options[Idx] = KeyPicker;
 return self;
 end;
 
-
+                                    
     function BaseAddonsFuncs:AddDropdown(Idx, Info)
         Info.ReturnInstanceInstead = if typeof(Info.ReturnInstanceInstead) == "boolean" then Info.ReturnInstanceInstead else false;
 
