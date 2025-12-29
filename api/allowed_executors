@@ -1,12 +1,3 @@
 return {
-    "Volcano",
-    "Bunni",
-    "Potassium",
-    "Seliware",
-    "Wave",
-    "ChocoSploit",
-    "Velocity",
-    "ChocoSploit/1.0",
-    "Potassium/v1.9.3",
-    "Wave/version-5b077c09380f4fe6",
+    Volcano = true, Bunni = true, Potassium = true, Seliware = true, Wave = true, ChocoSploit = true, Velocity = true, ["ChocoSploit/1.0"] = true, ["Potassium/v1.9.3"] = true, ["Wave/version-5b077c09380f4fe6"] = true,
 }
