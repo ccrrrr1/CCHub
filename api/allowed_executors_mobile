@@ -1,0 +1,5 @@
+return {
+    ["Delta iOS/2.0"] = true,
+    ["Delta Android/2.0"] = true,
+    ["Delta"] = true,
+}
