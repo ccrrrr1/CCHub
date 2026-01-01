@@ -1,4 +1,13 @@
-Executor = identifyexecutor()
-if Executor == "Xeno" or Executor == "Solara" then
+executor=identifyexecutor()
+if executor=="Xeno" or executor=="Solara" then
+    game:GetService("Players").LocalPlayer:Kick("This executor is not supported! Please visit https://getv3.lol/#faq and scroll all the way down to see what's supported.")
+end
+clone_supported=pcall(function()
+    function_replace=function()return"success"end
+    clone=clonefunction(function_replace)
+    assert(function_replace()==clone())
+    assert(function_replace~=clone)
+end)
+if not clone_supported then
     game:GetService("Players").LocalPlayer:Kick("This executor is not supported! Please visit https://getv3.lol/#faq and scroll all the way down to see what's supported.")
 end
