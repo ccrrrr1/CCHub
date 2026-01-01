@@ -1,0 +1,4 @@
+Executor = identifyexecutor()
+if Executor == "Xeno" or Executor == "Solara" then
+    game:GetService("Players").LocalPlayer:Kick("This executor is not supported! Please visit https://getv3.lol/#faq and scroll all the way down to see what's supported.")
+end
