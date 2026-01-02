@@ -44,6 +44,28 @@ if typeof(clonefunction) == "function" then
     end
 end
 
+local function clean_folder_name(str)
+    str = tostring(str)
+    str = str:gsub("[\128-\255]", "")
+    str = str:gsub("[^%w%s%-_]", "")
+    str = str:gsub("%s+", " ")
+    str = str:gsub("^%s+", ""):gsub("%s+$", "")
+    if str == "" then
+        str = "Unknown"
+    end
+    return str
+end
+
+local function safe_makefolder(path)
+    local built = ""
+    for part in path:gmatch("[^/]+") do
+        built = built == "" and part or built .. "/" .. part
+        if not isfolder(built) then
+            pcall(makefolder, built)
+        end
+    end
+end
+
 local SaveManager = {} do
     SaveManager.Folder = "LinoriaLibSettings"
     SaveManager.SubFolder = ""
@@ -167,38 +189,39 @@ local SaveManager = {} do
     end
 
     function SaveManager:BuildFolderTree()
-        local paths = self:GetPaths()
+    self.Folder = clean_folder_name(self.Folder)
 
-        for i = 1, #paths do
-            local str = paths[i]
-            if isfolder(str) then continue end
+    safe_makefolder(self.Folder)
+    safe_makefolder(self.Folder .. "/themes")
+    safe_makefolder(self.Folder .. "/settings")
 
-            makefolder(str)
-        end
+    if typeof(self.SubFolder) == "string" and self.SubFolder ~= "" then
+        self.SubFolder = clean_folder_name(self.SubFolder)
+        safe_makefolder(self.Folder .. "/settings/" .. self.SubFolder)
+    end
     end
 
     function SaveManager:CheckFolderTree()
-        if isfolder(self.Folder) then return end
-        SaveManager:BuildFolderTree()
-
-        task.wait(0.1)
+    if isfolder(self.Folder) then return end
+    self:BuildFolderTree()
     end
 
     function SaveManager:SetIgnoreIndexes(list)
-        for _, key in next, list do
-            self.Ignore[key] = true
-        end
+    for i = 1, #list do
+        self.Ignore[list[i]] = true
+    end
     end
 
     function SaveManager:SetFolder(folder)
-        self.Folder = folder;
-        self:BuildFolderTree()
+    self.Folder = clean_folder_name(folder)
+    self:BuildFolderTree()
     end
 
     function SaveManager:SetSubFolder(folder)
-        self.SubFolder = folder;
-        self:BuildFolderTree()
+    self.SubFolder = clean_folder_name(folder)
+    self:BuildFolderTree()
     end
+
 
     --// Save, Load, Delete, Refresh \\--
     function SaveManager:Save(name)
