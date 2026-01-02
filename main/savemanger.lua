@@ -189,9 +189,12 @@ local SaveManager = {} do
     end
 
     function SaveManager:BuildFolderTree()
-    local root = self.BaseFolder
-    local game_folder = clean_name(self.Folder)
+    if not self.BaseFolder or type(self.BaseFolder) ~= "string" then
+        self.BaseFolder = "V3Configs"
+    end
 
+    local root = self.BaseFolder
+    local game_folder = clean_name(self.Folder or game.Name)
     local full_root = root .. "/" .. game_folder
 
     safe_makefolder(root)
@@ -208,7 +211,9 @@ local SaveManager = {} do
     end
 
     function SaveManager:CheckFolderTree()
-    if self._resolved_folder and isfolder(self._resolved_folder) then return end
+    if self._resolved_folder and isfolder(self._resolved_folder) then
+        return
+    end
     self:BuildFolderTree()
     end
 
