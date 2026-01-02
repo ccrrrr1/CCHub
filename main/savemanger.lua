@@ -44,7 +44,7 @@ if typeof(clonefunction) == "function" then
     end
 end
 
-local function clean_folder_name(str)
+local function clean_name(str)
     str = tostring(str)
     str = str:gsub("[\128-\255]", "")
     str = str:gsub("[^%w%s%-_]", "")
@@ -189,39 +189,38 @@ local SaveManager = {} do
     end
 
     function SaveManager:BuildFolderTree()
-    self.Folder = clean_folder_name(self.Folder)
+    local root = self.BaseFolder
+    local game_folder = clean_name(self.Folder)
 
-    safe_makefolder(self.Folder)
-    safe_makefolder(self.Folder .. "/themes")
-    safe_makefolder(self.Folder .. "/settings")
+    local full_root = root .. "/" .. game_folder
+
+    safe_makefolder(root)
+    safe_makefolder(full_root)
+    safe_makefolder(full_root .. "/themes")
+    safe_makefolder(full_root .. "/settings")
 
     if typeof(self.SubFolder) == "string" and self.SubFolder ~= "" then
-        self.SubFolder = clean_folder_name(self.SubFolder)
-        safe_makefolder(self.Folder .. "/settings/" .. self.SubFolder)
+        local sub = clean_name(self.SubFolder)
+        safe_makefolder(full_root .. "/settings/" .. sub)
     end
+
+    self._resolved_folder = full_root
     end
 
     function SaveManager:CheckFolderTree()
-    if isfolder(self.Folder) then return end
+    if self._resolved_folder and isfolder(self._resolved_folder) then return end
     self:BuildFolderTree()
     end
 
-    function SaveManager:SetIgnoreIndexes(list)
-    for i = 1, #list do
-        self.Ignore[list[i]] = true
-    end
-    end
-
     function SaveManager:SetFolder(folder)
-    self.Folder = clean_folder_name(folder)
+    self.Folder = folder
     self:BuildFolderTree()
     end
 
     function SaveManager:SetSubFolder(folder)
-    self.SubFolder = clean_folder_name(folder)
+    self.SubFolder = folder
     self:BuildFolderTree()
     end
-
 
     --// Save, Load, Delete, Refresh \\--
     function SaveManager:Save(name)
@@ -265,30 +264,39 @@ local SaveManager = {} do
     end
 
     function SaveManager:Load(name)
-        if (not name) then
-            return false, 'no config file is selected'
+    if not name then
+        return false, "no config file is selected"
+    end
+
+    self:CheckFolderTree()
+
+    name = clean_name(name)
+
+    local base = self._resolved_folder .. "/settings"
+    local file
+
+    if typeof(self.SubFolder) == "string" and self.SubFolder ~= "" then
+        file = base .. "/" .. clean_name(self.SubFolder) .. "/" .. name .. ".json"
+    else
+        file = base .. "/" .. name .. ".json"
+    end
+
+    if not isfile(file) then
+        return false, "invalid file"
+    end
+
+    local success, decoded = pcall(httpService.JSONDecode, httpService, readfile(file))
+    if not success or typeof(decoded) ~= "table" then
+        return false, "decode error"
+    end
+
+    for _, option in next, decoded.objects do
+        if option.type and self.Parser[option.type] and not self.Ignore[option.idx] then
+            task.spawn(self.Parser[option.type].Load, option.idx, option)
         end
-        SaveManager:CheckFolderTree()
+    end
 
-        local file = self.Folder .. '/settings/' .. name .. '.json'
-        if SaveManager:CheckSubFolder(true) then
-            file = self.Folder .. "/settings/" .. self.SubFolder .. "/" .. name .. '.json'
-        end
-
-        if not isfile(file) then return false, 'invalid file' end
-
-        local success, decoded = pcall(HttpService.JSONDecode, HttpService, readfile(file))
-        if not success then return false, 'decode error' end
-
-        for _, option in next, decoded.objects do
-            if not option.type then continue end
-            if not self.Parser[option.type] then continue end
-            if self.Ignore[option.idx] then continue end
-
-            task.spawn(self.Parser[option.type].Load, option.idx, option) -- task.spawn() so the config loading wont get stuck.
-        end
-
-        return true
+    return true
     end
 
     function SaveManager:Delete(name)
