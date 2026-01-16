@@ -7,10 +7,12 @@ return {
     ChocoSploit = true,
     Hydrogen = true,
     Velocity = true,
+    MacSploit = true,
     ["ChocoSploit/1.0"] = true,
     ["Potassium/v1.9.3"] = true,
     ["Seliware/1.0"] = true,
     ["Seliware/2.0"] = true,
     ["MacSploit/v1.9.7"] = true,
+    ["MacSploit/v1.9.8"] = true,
     ["Wave/version-f8f53a67efca4c34"] = true,
 }
