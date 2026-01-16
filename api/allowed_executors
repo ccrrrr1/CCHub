@@ -14,5 +14,6 @@ return {
     ["Seliware/2.0"] = true,
     ["MacSploit/v1.9.7"] = true,
     ["MacSploit/v1.9.8"] = true,
+    ["Potassium/v1.9.7"] = true,
     ["Wave/version-f8f53a67efca4c34"] = true,
 }
